@@ -4688,10 +4688,27 @@
       }
     }
 
+    function applyLocationsToAllRenderedCells() {
+      document.querySelectorAll('.fc-daygrid-day[data-date]').forEach((el) => {
+        const date = el.getAttribute('data-date');
+        const loc = locationByDate[date];
+        if (loc) {
+          el.classList.add('has-location');
+          el.style.setProperty('--location-bg', loc.color);
+          el.setAttribute('title', loc.name);
+        } else {
+          el.classList.remove('has-location');
+          el.style.removeProperty('--location-bg');
+          if (el.getAttribute('title')) el.removeAttribute('title');
+        }
+      });
+    }
     function refreshAllCalendars() {
       try { fcCalendarInstance && fcCalendarInstance.render(); } catch (_) {}
       try { fcCalendarInlineInstance && fcCalendarInlineInstance.render(); } catch (_) {}
       try { fcCalendarMobileInstance && fcCalendarMobileInstance.render(); } catch (_) {}
+      // dayCellDidMount はマウント時1回のため、既にマウント済みのセルにも直接適用
+      applyLocationsToAllRenderedCells();
     }
 
     function updateTodayLocationChip() {
