@@ -1791,6 +1791,27 @@
   .calendar-panel-header {
     padding: var(--space-md) var(--space-lg);
     border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .location-legend {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .location-legend-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #1d1d1f;
+    border: 1px solid rgba(0,0,0,0.08);
+    white-space: nowrap;
   }
 
   .calendar-panel-title {
@@ -2348,6 +2369,7 @@
         <aside class="calendar-panel" id="calendarPanel">
           <div class="calendar-panel-header">
             <h3 class="calendar-panel-title">カレンダー</h3>
+            <div class="location-legend" id="locationLegend"></div>
           </div>
           <div id="fcCalendarInline"></div>
         </aside>
@@ -2702,6 +2724,7 @@
       locationEnd: document.getElementById('locationEnd'),
       locationError: document.getElementById('locationError'),
       btnSubmitLocation: document.getElementById('btnSubmitLocation'),
+      locationLegend: document.getElementById('locationLegend'),
       newTaskError: document.getElementById('newTaskError'),
       btnCloseNewTask: document.getElementById('btnCloseNewTask'),
       btnSubmitNewTask: document.getElementById('btnSubmitNewTask')
@@ -4765,9 +4788,31 @@
       `).join('');
     }
 
+    function renderLocationLegend() {
+      if (!elements.locationLegend) return;
+      const presets = [
+        { name: '本社', color: LOCATION_PRESET_COLORS['本社'] },
+        { name: '名古屋', color: LOCATION_PRESET_COLORS['名古屋'] },
+        { name: '大阪', color: LOCATION_PRESET_COLORS['大阪'] }
+      ];
+      const presetNames = new Set(presets.map(p => p.name));
+      const seen = new Set();
+      const customs = [];
+      locations.forEach(loc => {
+        if (!loc || !loc.name || presetNames.has(loc.name)) return;
+        if (seen.has(loc.name)) return;
+        seen.add(loc.name);
+        customs.push({ name: loc.name, color: loc.color || '#E1BEE7' });
+      });
+      const all = [...presets, ...customs];
+      elements.locationLegend.innerHTML = all.map(it =>
+        `<span class="location-legend-chip" style="background:${escapeHtml(it.color)}">${escapeHtml(it.name)}</span>`
+      ).join('');
+    }
     async function reloadAndRenderLocations() {
       await loadLocations();
       renderLocationList();
+      renderLocationLegend();
       updateTodayLocationChip();
       refreshAllCalendars();
     }
