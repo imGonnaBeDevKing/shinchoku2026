@@ -4697,17 +4697,7 @@
       if (!db) return;
       try {
         const snap = await getDocs(query(collection(db, 'locations'), orderBy('createdAt', 'asc')));
-        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const today = todayDateString();
-        const past = all.filter(loc => loc.endDate && loc.endDate < today);
-        if (isAdmin && past.length > 0) {
-          try {
-            await Promise.all(past.map(loc => deleteDoc(doc(db, 'locations', loc.id))));
-          } catch (delErr) {
-            console.error('delete past locations error', delErr);
-          }
-        }
-        locations = all.filter(loc => !loc.endDate || loc.endDate >= today);
+        locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         rebuildLocationIndex();
       } catch (e) {
         console.error('loadLocations error', e);
@@ -4771,11 +4761,13 @@
 
     function renderLocationList() {
       if (!elements.locationList) return;
-      if (locations.length === 0) {
-        elements.locationList.innerHTML = '<div class="location-list-empty">登録された場所はありません</div>';
+      const today = todayDateString();
+      const visible = locations.filter(loc => !loc.endDate || loc.endDate >= today);
+      if (visible.length === 0) {
+        elements.locationList.innerHTML = '<div class="location-list-empty">今日以降に登録された場所はありません</div>';
         return;
       }
-      const sorted = [...locations].sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+      const sorted = [...visible].sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
       elements.locationList.innerHTML = sorted.map(loc => `
         <div class="location-list-item" data-id="${loc.id}">
           <span class="location-list-swatch" style="background:${escapeHtml(loc.color)}"></span>
