@@ -4817,10 +4817,36 @@
       refreshAllCalendars();
     }
 
+    const CUSTOM_PRESETS_KEY = 'locationCustomPresets_v1';
+    function getCustomLocationPresets() {
+      try {
+        const raw = localStorage.getItem(CUSTOM_PRESETS_KEY);
+        return raw ? (JSON.parse(raw) || []) : [];
+      } catch (e) { return []; }
+    }
+    function saveCustomLocationPreset(name, color) {
+      const presets = getCustomLocationPresets();
+      const idx = presets.findIndex(p => p.name === name);
+      if (idx >= 0) presets[idx] = { name, color };
+      else presets.push({ name, color });
+      try { localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(presets)); } catch (e) {}
+    }
+    function populateLocationPresetDropdown() {
+      const sel = elements.locationPreset;
+      if (!sel) return;
+      const customs = getCustomLocationPresets();
+      let html = '<option value="本社">本社</option><option value="名古屋">名古屋</option><option value="大阪">大阪</option>';
+      customs.forEach(p => {
+        html += `<option value="custom-existing:${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`;
+      });
+      html += '<option value="custom">その他（自由入力）</option>';
+      sel.innerHTML = html;
+    }
     function openLocationModal() {
       if (!isAdmin) return;
       elements.locationModal.classList.add('active');
       if (typeof onModalOpen === 'function') onModalOpen();
+      populateLocationPresetDropdown();
       elements.locationPreset.value = '本社';
       elements.locationCustomWrap.style.display = 'none';
       elements.locationCustomName.value = '';
@@ -4874,11 +4900,16 @@
       elements.btnSubmitLocation.disabled = true;
       try {
         const preset = elements.locationPreset.value;
-        let name, color;
+        let name, color, isNewCustom = false;
         if (preset === 'custom') {
           name = elements.locationCustomName.value.trim();
           color = elements.locationCustomColor.value;
           if (!name) throw { code: 'invalid-name' };
+          isNewCustom = true;
+        } else if (preset.startsWith('custom-existing:')) {
+          name = preset.slice('custom-existing:'.length);
+          const existing = getCustomLocationPresets().find(p => p.name === name);
+          color = existing ? existing.color : '#E1BEE7';
         } else {
           name = preset;
           color = LOCATION_PRESET_COLORS[preset];
@@ -4898,6 +4929,7 @@
           createdAt: new Date().toISOString(),
           createdBy: currentUser?.email || 'unknown'
         });
+        if (isNewCustom) saveCustomLocationPreset(name, color);
         elements.locationForm.reset();
         elements.locationCustomWrap.style.display = 'none';
         elements.locationStart.value = todayDateString();
