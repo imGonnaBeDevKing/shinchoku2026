@@ -1741,6 +1741,17 @@
     font-family: var(--font-family);
   }
 
+  /* 毎週繰り返しタスクの未来分(仮表示) */
+  .recurring-ghost-event {
+    opacity: 0.65;
+    border-style: dashed !important;
+    border-width: 1px !important;
+  }
+  .recurring-ghost-event .fc-event-title,
+  .recurring-ghost-event .fc-event-main {
+    font-style: italic;
+  }
+
   /* ===================================================
      PC版 2カラムレイアウト（タスク + カレンダー常時表示）
   =================================================== */
@@ -2257,6 +2268,41 @@
           <label class="form-label" for="newTaskDeadline">期限（任意）</label>
           <input type="date" class="form-input" id="newTaskDeadline">
         </div>
+        <div class="form-group">
+          <label class="form-label">繰り返し</label>
+          <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="newTaskRecurringMode" value="none" id="newTaskRecurringNone" checked style="width:auto; margin:0;">
+              <span>なし</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="newTaskRecurringMode" value="weekly" id="newTaskRecurringWeekly" style="width:auto; margin:0;">
+              <span>毎週</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="newTaskRecurringMode" value="monthly" id="newTaskRecurringMonthly" style="width:auto; margin:0;">
+              <span>毎月</span>
+            </label>
+          </div>
+          <div id="newTaskRecurringDayWrap" style="display:none; margin-top:8px;">
+            <label class="form-label" for="newTaskRecurringDay">曜日</label>
+            <select class="form-input" id="newTaskRecurringDay">
+              <option value="1">毎週 月曜日</option>
+              <option value="2">毎週 火曜日</option>
+              <option value="3">毎週 水曜日</option>
+              <option value="4">毎週 木曜日</option>
+              <option value="5">毎週 金曜日</option>
+              <option value="6">毎週 土曜日</option>
+              <option value="0">毎週 日曜日</option>
+            </select>
+            <p class="form-helper">完了するたびに、翌週の同曜日分が自動で追加されます。期限を空欄にすると次回の該当曜日が自動で入ります。</p>
+          </div>
+          <div id="newTaskRecurringDomWrap" style="display:none; margin-top:8px;">
+            <label class="form-label" for="newTaskRecurringDom">日付</label>
+            <select class="form-input" id="newTaskRecurringDom"></select>
+            <p class="form-helper">完了するたびに翌月の同日分が自動で追加されます。31日など存在しない月は月末になります。期限を空欄にすると次回の該当日が自動で入ります。</p>
+          </div>
+        </div>
         <p class="login-error" id="newTaskError" style="display:none;"></p>
         <button type="submit" class="btn-submit" id="btnSubmitNewTask">追加する</button>
       </form>
@@ -2369,6 +2415,13 @@
       newTaskTitle: document.getElementById('newTaskTitle'),
       newTaskTitlePreview: document.getElementById('newTaskTitlePreview'),
       newTaskDeadline: document.getElementById('newTaskDeadline'),
+      newTaskRecurringNone: document.getElementById('newTaskRecurringNone'),
+      newTaskRecurringWeekly: document.getElementById('newTaskRecurringWeekly'),
+      newTaskRecurringMonthly: document.getElementById('newTaskRecurringMonthly'),
+      newTaskRecurringDay: document.getElementById('newTaskRecurringDay'),
+      newTaskRecurringDayWrap: document.getElementById('newTaskRecurringDayWrap'),
+      newTaskRecurringDom: document.getElementById('newTaskRecurringDom'),
+      newTaskRecurringDomWrap: document.getElementById('newTaskRecurringDomWrap'),
       newTaskError: document.getElementById('newTaskError'),
       btnCloseNewTask: document.getElementById('btnCloseNewTask'),
       btnSubmitNewTask: document.getElementById('btnSubmitNewTask')
@@ -3214,6 +3267,21 @@
       elements.newTaskCategory.value = '';
       elements.newTaskTitle.value = '';
       elements.newTaskDeadline.value = '';
+      if (elements.newTaskRecurringNone) elements.newTaskRecurringNone.checked = true;
+      if (elements.newTaskRecurringDayWrap) elements.newTaskRecurringDayWrap.style.display = 'none';
+      if (elements.newTaskRecurringDomWrap) elements.newTaskRecurringDomWrap.style.display = 'none';
+      if (elements.newTaskRecurringDay) {
+        const todayDow = new Date().getDay();
+        elements.newTaskRecurringDay.value = String(todayDow);
+      }
+      if (elements.newTaskRecurringDom) {
+        if (elements.newTaskRecurringDom.options.length === 0) {
+          const opts = [];
+          for (let i = 1; i <= 31; i += 1) opts.push(`<option value="${i}">毎月 ${i}日</option>`);
+          elements.newTaskRecurringDom.innerHTML = opts.join('');
+        }
+        elements.newTaskRecurringDom.value = String(new Date().getDate());
+      }
       elements.newTaskError.style.display = 'none';
       updateNewTaskTitlePreview();
       await loadNewTaskCategories();
@@ -3281,7 +3349,7 @@
 
         actionBtn.disabled = true;
         try {
-          await completeTaskAndLog(taskId, task.title);
+          await completeTaskAndLog(taskId, task.title, task);
           // tasksキャッシュを更新
           task.completed = true;
           // UI再描画
@@ -3342,7 +3410,7 @@
       return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
-    async function completeTaskAndLog(taskId, taskName) {
+    async function completeTaskAndLog(taskId, taskName, taskObj) {
       try {
         const when = new Date();
         await updateDoc(doc(db, 'tasks', taskId), {
@@ -3358,6 +3426,31 @@
           completedAtEpoch: when.getTime(),
           user: currentUser?.email || 'unknown'
         });
+
+        // 繰り返しタスクなら次回分を自動生成
+        if (taskObj && (taskObj.recurring === 'weekly' || taskObj.recurring === 'monthly')) {
+          const nextTask = {
+            title: taskObj.title,
+            progress: 0,
+            createdAt: when.toISOString(),
+            completed: false,
+            recurring: taskObj.recurring
+          };
+          if (taskObj.recurring === 'weekly') {
+            const dow = Number.isInteger(taskObj.recurringDayOfWeek) ? taskObj.recurringDayOfWeek : null;
+            if (taskObj.deadline) nextTask.deadline = addDaysToDateString(taskObj.deadline, 7);
+            else if (dow !== null) nextTask.deadline = nextDateOfWeekday(dow);
+            else nextTask.deadline = null;
+            if (dow !== null) nextTask.recurringDayOfWeek = dow;
+          } else {
+            const dom = Number.isInteger(taskObj.recurringDayOfMonth) ? taskObj.recurringDayOfMonth : null;
+            if (taskObj.deadline) nextTask.deadline = addMonthsToDateString(taskObj.deadline, 1, dom);
+            else if (dom !== null) nextTask.deadline = nextDateOfMonthDay(dom);
+            else nextTask.deadline = null;
+            if (dom !== null) nextTask.recurringDayOfMonth = dom;
+          }
+          await addDoc(collection(db, 'tasks'), nextTask);
+        }
       } catch (error) {
         console.error('Error completing task and logging:', error);
         throw error;
@@ -3563,6 +3656,78 @@
       updateNewTaskTitlePreview();
     });
 
+    // 繰り返しモードのラジオ切替
+    function updateRecurringModeUI() {
+      const mode = document.querySelector('input[name="newTaskRecurringMode"]:checked')?.value || 'none';
+      if (elements.newTaskRecurringDayWrap) elements.newTaskRecurringDayWrap.style.display = (mode === 'weekly') ? 'block' : 'none';
+      if (elements.newTaskRecurringDomWrap) elements.newTaskRecurringDomWrap.style.display = (mode === 'monthly') ? 'block' : 'none';
+    }
+    elements.newTaskRecurringNone?.addEventListener('change', updateRecurringModeUI);
+    elements.newTaskRecurringWeekly?.addEventListener('change', updateRecurringModeUI);
+    elements.newTaskRecurringMonthly?.addEventListener('change', updateRecurringModeUI);
+
+    // 指定された曜日(0=日〜6=土)の「次回該当日」をYYYY-MM-DDで返す
+    function nextDateOfWeekday(targetDow, baseDate) {
+      const base = baseDate ? new Date(baseDate) : new Date();
+      base.setHours(0, 0, 0, 0);
+      const baseDow = base.getDay();
+      let diff = (targetDow - baseDow + 7) % 7;
+      if (diff === 0) diff = 7; // 同日は避けて翌週
+      const next = new Date(base);
+      next.setDate(base.getDate() + diff);
+      const y = next.getFullYear();
+      const m = String(next.getMonth() + 1).padStart(2, '0');
+      const d = String(next.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // 既存のYYYY-MM-DDに7日足す
+    function addDaysToDateString(dateStr, days) {
+      const d = new Date(dateStr + 'T00:00:00');
+      d.setDate(d.getDate() + days);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    }
+
+    // 指定された月の日数
+    function daysInMonth(year, monthIndex0) {
+      return new Date(year, monthIndex0 + 1, 0).getDate();
+    }
+
+    // 指定された「毎月X日」の次回該当日(基準日含めず)
+    function nextDateOfMonthDay(targetDom, baseDate) {
+      const base = baseDate ? new Date(baseDate) : new Date();
+      base.setHours(0, 0, 0, 0);
+      let year = base.getFullYear();
+      let month = base.getMonth();
+      const todayDom = base.getDate();
+      // 今月のtargetDomが基準日より後 → 今月、そうでなければ翌月
+      if (targetDom <= todayDom) {
+        month += 1;
+        if (month > 11) { month = 0; year += 1; }
+      }
+      const dom = Math.min(targetDom, daysInMonth(year, month));
+      const m = String(month + 1).padStart(2, '0');
+      const d = String(dom).padStart(2, '0');
+      return `${year}-${m}-${d}`;
+    }
+
+    // YYYY-MM-DDに「monthsか月」足す（targetDom優先、月末はクランプ）
+    function addMonthsToDateString(dateStr, months, targetDom) {
+      const d = new Date(dateStr + 'T00:00:00');
+      const baseDom = Number.isInteger(targetDom) ? targetDom : d.getDate();
+      let year = d.getFullYear();
+      let month = d.getMonth() + months;
+      while (month > 11) { month -= 12; year += 1; }
+      while (month < 0) { month += 12; year -= 1; }
+      const dom = Math.min(baseDom, daysInMonth(year, month));
+      const m = String(month + 1).padStart(2, '0');
+      const dd = String(dom).padStart(2, '0');
+      return `${year}-${m}-${dd}`;
+    }
+
     // add: 新規タスクモーダル - フォーム送信
     elements.newTaskForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3576,15 +3741,30 @@
         if (!title) {
           throw { code: 'invalid-title' };
         }
-        const dl = elements.newTaskDeadline.value; // '' or 'YYYY-MM-DD'
+        let dl = elements.newTaskDeadline.value; // '' or 'YYYY-MM-DD'
+        const recurringMode = document.querySelector('input[name="newTaskRecurringMode"]:checked')?.value || 'none';
+        const recurringDow = (recurringMode === 'weekly') ? Number(elements.newTaskRecurringDay.value) : null;
+        const recurringDom = (recurringMode === 'monthly') ? Number(elements.newTaskRecurringDom.value) : null;
+        if (!dl) {
+          if (recurringMode === 'weekly') dl = nextDateOfWeekday(recurringDow);
+          else if (recurringMode === 'monthly') dl = nextDateOfMonthDay(recurringDom);
+        }
 
-        await addTask({
+        const newTaskDoc = {
           title,
           progress: 0,
           deadline: dl || null,
           createdAt: new Date().toISOString(),
           completed: false
-        });
+        };
+        if (recurringMode === 'weekly') {
+          newTaskDoc.recurring = 'weekly';
+          newTaskDoc.recurringDayOfWeek = recurringDow;
+        } else if (recurringMode === 'monthly') {
+          newTaskDoc.recurring = 'monthly';
+          newTaskDoc.recurringDayOfMonth = recurringDom;
+        }
+        await addTask(newTaskDoc);
 
         closeNewTaskModal();
         elements.newTaskForm.reset();
@@ -3661,7 +3841,7 @@
         jun: '#007AFF'
       };
       const range = getCalendarRangeBounds(fetchInfo);
-      return tasks
+      const realEvents = tasks
         .filter((t) => {
           if (!t.deadline) return false;
           if (!range.start || !range.endInclusive) return true;
@@ -3680,10 +3860,49 @@
             textColor: status === 'ran' ? '#1d1d1f' : '#ffffff',
             editable: isAdmin,
             extendedProps: {
-              isHoliday: false
+              isHoliday: false,
+              isRecurringGhost: false
             }
           };
         });
+
+      // 繰り返しタスクの未来分を仮表示（実体は未生成）
+      const ghostEvents = [];
+      if (range.start && range.endInclusive) {
+        tasks.forEach((t) => {
+          if (t.recurring !== 'weekly' && t.recurring !== 'monthly') return;
+          if (toBool(t.completed)) return;
+          if (!t.deadline) return;
+          const stepFn = (t.recurring === 'weekly')
+            ? (cur) => addDaysToDateString(cur, 7)
+            : (cur) => addMonthsToDateString(cur, 1, t.recurringDayOfMonth);
+          let cursor = stepFn(t.deadline);
+          let safety = 0;
+          while (cursor <= range.endInclusive && safety < 60) {
+            if (cursor >= range.start) {
+              ghostEvents.push({
+                id: `ghost-${t.id}-${cursor}`,
+                title: `🔁 ${t.title || '(無題)'}`,
+                start: cursor,
+                allDay: true,
+                backgroundColor: '#E5E5EA',
+                borderColor: '#C7C7CC',
+                textColor: '#3A3A3C',
+                editable: false,
+                classNames: ['recurring-ghost-event'],
+                extendedProps: {
+                  isHoliday: false,
+                  isRecurringGhost: true
+                }
+              });
+            }
+            cursor = stepFn(cursor);
+            safety += 1;
+          }
+        });
+      }
+
+      return [...realEvents, ...ghostEvents];
     }
 
     async function fetchHolidayMapByYear(year) {
