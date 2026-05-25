@@ -4674,7 +4674,17 @@
       if (!db) return;
       try {
         const snap = await getDocs(query(collection(db, 'locations'), orderBy('createdAt', 'asc')));
-        locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const today = todayDateString();
+        const past = all.filter(loc => loc.endDate && loc.endDate < today);
+        if (isAdmin && past.length > 0) {
+          try {
+            await Promise.all(past.map(loc => deleteDoc(doc(db, 'locations', loc.id))));
+          } catch (delErr) {
+            console.error('delete past locations error', delErr);
+          }
+        }
+        locations = all.filter(loc => !loc.endDate || loc.endDate >= today);
         rebuildLocationIndex();
       } catch (e) {
         console.error('loadLocations error', e);
