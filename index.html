@@ -1741,6 +1741,15 @@
     font-family: var(--font-family);
   }
 
+  /* 完了済みタスク（カレンダー） */
+  .completed-event {
+    opacity: 0.7;
+  }
+  .completed-event .fc-event-title,
+  .completed-event .fc-event-main {
+    text-decoration: line-through;
+  }
+
   /* 毎週繰り返しタスクの未来分(仮表示) */
   .recurring-ghost-event {
     opacity: 0.65;
@@ -1764,6 +1773,8 @@
   .calendar-panel {
     display: none;
   }
+  .right-column { display: contents; }
+  .today-panel { display: none; }
 
   /* スマホ版カレンダー（デフォルト表示） */
   .calendar-panel-mobile {
@@ -1802,6 +1813,11 @@
     .calendar-panel-mobile {
       display: none;
     }
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
     .calendar-panel {
       display: block;
       background: var(--bg-secondary);
@@ -1809,12 +1825,194 @@
       box-shadow: var(--shadow-light);
       /* 緊急カードの 3px ボーダーと上端を揃えるため、透明 3px ボーダーで補正 */
       border: 3px solid transparent;
-      position: sticky;
-      /* body の 44px padding-top で fixed ヘッダー分は確保済みのため、
-         ここでは main-content と同じ上余白だけを確保して上端を揃える */
-      top: var(--space-xl);
       overflow: hidden;
     }
+    .today-panel {
+      display: block;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-light);
+      border: 3px solid transparent;
+      overflow: hidden;
+    }
+    .today-panel-header {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+    .today-panel-title {
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .today-panel-date {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .today-timeline-wrap {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      padding: var(--space-md) var(--space-lg);
+      gap: 0;
+    }
+    .today-timeline-hours {
+      position: relative;
+      height: 540px;  /* 9h × 60px */
+    }
+    .today-timeline-hours .hour-label {
+      position: absolute;
+      right: 8px;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .today-timeline-grid {
+      position: relative;
+      height: 540px;
+      border-left: 1px solid var(--border-color);
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 29px,
+          rgba(0,0,0,0.04) 29px,
+          rgba(0,0,0,0.04) 30px
+        ),
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 59px,
+          rgba(0,0,0,0.12) 59px,
+          rgba(0,0,0,0.12) 60px
+        );
+      border-radius: 4px;
+    }
+    .today-timeline-grid.drag-over {
+      background-color: rgba(0,122,255,0.06);
+    }
+    .today-timeline-empty {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      padding: 16px;
+      pointer-events: none;
+    }
+    .today-block {
+      position: absolute;
+      left: 2%;
+      right: 2%;
+      background: var(--color-jun);
+      color: #fff;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      overflow: hidden;
+      box-sizing: border-box;
+      cursor: grab;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .today-block .today-block-title {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1 1 auto;
+    }
+    .today-block .today-block-time {
+      font-size: 10px;
+      opacity: 0.9;
+      font-variant-numeric: tabular-nums;
+    }
+    .today-block .today-block-remove {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      background: transparent;
+      border: 0;
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      padding: 2px 4px;
+    }
+    .today-block .today-block-remove:hover { color: #fff; }
+    .today-block .today-block-resize {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 8px;
+      cursor: ns-resize;
+      background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.35));
+      border-radius: 0 0 6px 6px;
+    }
+    .today-block.dragging { opacity: 0.5; }
+    .today-panel.view-only .today-block { cursor: default; }
+    .today-panel.view-only .today-block-remove,
+    .today-panel.view-only .today-block-resize { display: none; }
+    .today-location-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #1d1d1f;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    .today-location-chip.is-empty { color: var(--text-secondary); background: transparent; border-color: transparent; font-weight: normal; }
+    /* カレンダーセルの場所背景 */
+    .fc-daygrid-day.has-location { background-color: var(--location-bg, transparent); }
+    .fc-daygrid-day.has-location .fc-daygrid-day-frame { background: transparent; }
+    /* 場所モーダル: 一覧アイテム */
+    .location-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .location-list-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .location-list-item .location-list-text { flex: 1 1 auto; min-width: 0; }
+    .location-list-item .location-list-name { font-weight: 600; }
+    .location-list-item .location-list-range { color: var(--text-secondary); font-size: 12px; }
+    .btn-location-delete { background: transparent; border: 0; color: var(--color-zetsu); cursor: pointer; padding: 4px 8px; font-size: 16px; }
+    .location-list-empty { color: var(--text-secondary); font-size: 13px; padding: 8px 0; }
+    .schedule-handle {
+      cursor: grab;
+      padding: 4px 6px;
+      color: var(--text-secondary);
+      user-select: none;
+      font-size: 14px;
+      line-height: 1;
+    }
+    .schedule-handle:hover { color: var(--text-primary); }
+    .schedule-handle:active { cursor: grabbing; }
     #fcCalendarInline {
       padding: var(--space-md) var(--space-lg) var(--space-lg);
       min-height: 620px;
@@ -2095,6 +2293,7 @@
       <button class="btn-hoshitori" id="btnOpenDashboard" style="display:none;">
         追加
       </button>
+      <button class="btn-worklog" id="btnOpenLocation" style="display:none;">場所</button>
       <button class="btn-worklog" id="btnOpenCalendar" style="display:none;">暦</button>
       <button class="btn-worklog" id="btnOpenWorklog">ログ</button>
       <button class="btn-login" id="btnLogin">
@@ -2122,13 +2321,28 @@
         <div id="fcCalendarMobile"></div>
       </div>
 
-      <!-- PC版: カレンダー常時表示（右カラム） -->
-      <aside class="calendar-panel" id="calendarPanel">
-        <div class="calendar-panel-header">
-          <h3 class="calendar-panel-title">カレンダー</h3>
-        </div>
-        <div id="fcCalendarInline"></div>
-      </aside>
+      <!-- PC版: 右カラム（今日のタスク上 / カレンダー下） -->
+      <div class="right-column">
+        <aside class="today-panel" id="todayPanel">
+          <div class="today-panel-header">
+            <h3 class="today-panel-title">今日のタスク</h3>
+            <span class="today-location-chip is-empty" id="todayLocationChip">場所未設定</span>
+            <span class="today-panel-date" id="todayPanelDate"></span>
+          </div>
+          <div class="today-timeline-wrap">
+            <div class="today-timeline-hours" id="todayTimelineHours"></div>
+            <div class="today-timeline-grid" id="todayTimelineGrid" data-drop="today">
+              <div class="today-timeline-empty" id="todayTimelineEmpty">タスクカード右端の 🕘 をドラッグして9〜18時のラインに置いてください</div>
+            </div>
+          </div>
+        </aside>
+        <aside class="calendar-panel" id="calendarPanel">
+          <div class="calendar-panel-header">
+            <h3 class="calendar-panel-title">カレンダー</h3>
+          </div>
+          <div id="fcCalendarInline"></div>
+        </aside>
+      </div>
     </div>
   </main>
 
@@ -2309,6 +2523,43 @@
     </div>
   </div>
 
+  <!-- 場所モーダル -->
+  <div class="login-modal" id="locationModal">
+    <div class="login-container" role="dialog" aria-modal="true" aria-labelledby="locationModalTitle" tabindex="-1" style="position: relative; max-width: 520px;">
+      <button type="button" class="login-close" id="btnCloseLocation" aria-label="閉じる">×</button>
+      <h2 class="login-title" id="locationModalTitle">場所</h2>
+      <div id="locationList" style="margin-bottom:16px; max-height:240px; overflow:auto;"></div>
+      <h3 style="font-size:14px; margin: 0 0 8px; color: var(--text-secondary);">新しい場所を追加</h3>
+      <form id="locationForm">
+        <div class="form-group">
+          <label class="form-label" for="locationPreset">場所</label>
+          <select class="form-input" id="locationPreset">
+            <option value="本社">本社</option>
+            <option value="名古屋">名古屋</option>
+            <option value="大阪">大阪</option>
+            <option value="custom">その他（自由入力）</option>
+          </select>
+        </div>
+        <div class="form-group" id="locationCustomWrap" style="display:none;">
+          <label class="form-label" for="locationCustomName">場所名</label>
+          <input type="text" class="form-input" id="locationCustomName" placeholder="例: 福岡支社">
+          <label class="form-label" for="locationCustomColor" style="margin-top:8px;">色</label>
+          <input type="color" id="locationCustomColor" value="#E1BEE7" style="height:36px; width:100%;">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="locationStart">開始日</label>
+          <input type="date" class="form-input" id="locationStart" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="locationEnd">終了日</label>
+          <input type="date" class="form-input" id="locationEnd" required>
+        </div>
+        <p class="login-error" id="locationError" style="display:none;"></p>
+        <button type="submit" class="btn-submit" id="btnSubmitLocation">追加する</button>
+      </form>
+    </div>
+  </div>
+
   <!-- ===================================================
        Firebase SDK & アプリケーションロジック
        ⑤幅：Firebase無料枠、Vanilla JS
@@ -2359,7 +2610,8 @@
       doc,
       query,
       orderBy,
-      limit
+      limit,
+      where
     } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
     // ===================================================
@@ -2422,6 +2674,25 @@
       newTaskRecurringDayWrap: document.getElementById('newTaskRecurringDayWrap'),
       newTaskRecurringDom: document.getElementById('newTaskRecurringDom'),
       newTaskRecurringDomWrap: document.getElementById('newTaskRecurringDomWrap'),
+      todayPanel: document.getElementById('todayPanel'),
+      todayPanelDate: document.getElementById('todayPanelDate'),
+      todayLocationChip: document.getElementById('todayLocationChip'),
+      todayTimelineHours: document.getElementById('todayTimelineHours'),
+      todayTimelineGrid: document.getElementById('todayTimelineGrid'),
+      todayTimelineEmpty: document.getElementById('todayTimelineEmpty'),
+      btnOpenLocation: document.getElementById('btnOpenLocation'),
+      btnCloseLocation: document.getElementById('btnCloseLocation'),
+      locationModal: document.getElementById('locationModal'),
+      locationList: document.getElementById('locationList'),
+      locationForm: document.getElementById('locationForm'),
+      locationPreset: document.getElementById('locationPreset'),
+      locationCustomWrap: document.getElementById('locationCustomWrap'),
+      locationCustomName: document.getElementById('locationCustomName'),
+      locationCustomColor: document.getElementById('locationCustomColor'),
+      locationStart: document.getElementById('locationStart'),
+      locationEnd: document.getElementById('locationEnd'),
+      locationError: document.getElementById('locationError'),
+      btnSubmitLocation: document.getElementById('btnSubmitLocation'),
       newTaskError: document.getElementById('newTaskError'),
       btnCloseNewTask: document.getElementById('btnCloseNewTask'),
       btnSubmitNewTask: document.getElementById('btnSubmitNewTask')
@@ -2462,6 +2733,7 @@
     function updateAuthUI() {
       const btn = elements.btnLogin;
       elements.btnOpenDashboard.style.display = currentUser ? 'inline-flex' : 'none';
+      if (elements.btnOpenLocation) elements.btnOpenLocation.style.display = isAdmin ? 'inline-flex' : 'none';
       if (currentUser) {
         btn.textContent = 'ログアウト';
         btn.classList.add('logged-in');
@@ -2724,6 +2996,10 @@
         if (typeof initInlineCalendar === 'function') initInlineCalendar();
         // スマホ版: モバイルカレンダーを初期化/更新
         if (typeof initMobileCalendar === 'function') initMobileCalendar();
+        // 場所データを読み込み（カレンダー描画＋今日チップに反映）
+        if (typeof reloadAndRenderLocations === 'function') reloadAndRenderLocations();
+        // PC版: 今日のタスクパネル
+        if (typeof renderTodayPanel === 'function') renderTodayPanel();
       } catch (error) {
         console.error('renderMainHighlights error:', error);
         elements.mainHighlights.innerHTML = `
@@ -2876,6 +3152,7 @@
                 <input type="date" class="task-deadline-input" value="${task.deadline || ''}" data-field="deadline" aria-label="期限">
               </div>
               <div class="task-actions">
+                <span class="schedule-handle" draggable="true" data-task-id="${task.id}" title="今日のタスクへドラッグ" aria-label="今日のタスクへドラッグ">🕘</span>
                 <button type="button" class="btn-icon" data-action="complete" title="完了" ${completed ? 'disabled' : ''}>✓</button>
                 <button type="button" class="btn-icon delete" data-action="delete" title="削除">✕</button>
               </div>
@@ -3627,12 +3904,13 @@
     // ESCキーでモーダルを閉じる
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        const wasAnyActive = [elements.dashboardModal, elements.loginModal, elements.worklogModal, elements.newTaskModal]
+        const wasAnyActive = [elements.dashboardModal, elements.loginModal, elements.worklogModal, elements.newTaskModal, elements.locationModal]
           .some(m => m && m.classList.contains('active'));
         elements.dashboardModal.classList.remove('active');
         elements.loginModal.classList.remove('active');
         elements.worklogModal.classList.remove('active');
         closeNewTaskModal();  // add: new-task modal
+        if (elements.locationModal) elements.locationModal.classList.remove('active');
         if (wasAnyActive && typeof onModalClose === 'function') onModalClose();
       }
     });
@@ -3848,8 +4126,10 @@
           return t.deadline >= range.start && t.deadline <= range.endInclusive;
         })
         .map(t => {
+          const isCompleted = toBool(t.completed);
           const status = classifyTask(t) || 'jun';
-          const color = colorMap[status] || '#8E8E93';
+          const color = isCompleted ? '#8E8E93' : (colorMap[status] || '#8E8E93');
+          const textColor = isCompleted ? '#ffffff' : (status === 'ran' ? '#1d1d1f' : '#ffffff');
           return {
             id: t.id,
             title: t.title || '(無題)',
@@ -3857,11 +4137,13 @@
             allDay: true,
             backgroundColor: color,
             borderColor: color,
-            textColor: status === 'ran' ? '#1d1d1f' : '#ffffff',
-            editable: isAdmin,
+            textColor,
+            editable: isAdmin && !isCompleted,
+            classNames: isCompleted ? ['completed-event'] : [],
             extendedProps: {
               isHoliday: false,
-              isRecurringGhost: false
+              isRecurringGhost: false,
+              isCompleted
             }
           };
         });
@@ -4016,7 +4298,8 @@
             if (local) local.deadline = newDate;
             await renderMainHighlights();
           },
-          eventDidMount: markHolidayDayCell
+          eventDidMount: markHolidayDayCell,
+          dayCellDidMount: applyLocationToCalendarCell
         });
         fcCalendarInstance.render();
       } else {
@@ -4065,10 +4348,489 @@
           if (local) local.deadline = newDate;
           await renderMainHighlights();
         },
-        eventDidMount: markHolidayDayCell
+        eventDidMount: markHolidayDayCell,
+        dayCellDidMount: applyLocationToCalendarCell
       });
       fcCalendarInlineInstance.render();
     }
+
+    // ===================================================
+    // 今日のタスク（タイムブロッキング）
+    // ===================================================
+    const TODAY_PANEL_START_MIN = 540;   // 9:00
+    const TODAY_PANEL_END_MIN = 1080;    // 18:00
+    const TODAY_PX_PER_MIN = 1;          // 60min = 60px
+    const TODAY_SNAP_MIN = 30;
+    const TODAY_DEFAULT_DURATION = 60;
+    let todayBlocks = [];
+    let todayPanelInitialized = false;
+    let todayPanelDateString = null;
+
+    function todayDateString() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    }
+    function minutesToTimeLabel(min) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${h}:${String(m).padStart(2, '0')}`;
+    }
+    function clampTodayMin(v) {
+      return Math.max(TODAY_PANEL_START_MIN, Math.min(TODAY_PANEL_END_MIN, v));
+    }
+    function snapTodayMin(v) {
+      return Math.round(v / TODAY_SNAP_MIN) * TODAY_SNAP_MIN;
+    }
+    function pxFromMinSinceStart(min) {
+      return (min - TODAY_PANEL_START_MIN) * TODAY_PX_PER_MIN;
+    }
+    function minSinceStartFromPx(px) {
+      return TODAY_PANEL_START_MIN + (px / TODAY_PX_PER_MIN);
+    }
+    function renderTodayHours() {
+      if (!elements.todayTimelineHours) return;
+      const parts = [];
+      for (let h = 9; h <= 18; h += 1) {
+        const top = pxFromMinSinceStart(h * 60);
+        parts.push(`<span class="hour-label" style="top:${top}px">${h}:00</span>`);
+      }
+      elements.todayTimelineHours.innerHTML = parts.join('');
+    }
+    function layoutTodayColumns(blocks) {
+      const sorted = [...blocks].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+      let groupItems = [];
+      let groupEndMax = -Infinity;
+      const flush = () => {
+        const cols = [];
+        groupItems.forEach((b) => {
+          let col = -1;
+          for (let i = 0; i < cols.length; i += 1) {
+            if (cols[i] <= b.startMin) { col = i; break; }
+          }
+          if (col === -1) { cols.push(b.endMin); col = cols.length - 1; }
+          else { cols[col] = b.endMin; }
+          b._col = col;
+        });
+        groupItems.forEach((b) => { b._totalCols = cols.length; });
+      };
+      sorted.forEach((b) => {
+        if (groupItems.length === 0 || b.startMin < groupEndMax) {
+          groupItems.push(b);
+          groupEndMax = Math.max(groupEndMax, b.endMin);
+        } else {
+          flush();
+          groupItems = [b];
+          groupEndMax = b.endMin;
+        }
+      });
+      if (groupItems.length) flush();
+      return sorted;
+    }
+    function renderTodayBlocks() {
+      if (!elements.todayTimelineGrid) return;
+      elements.todayTimelineGrid.querySelectorAll('.today-block').forEach(el => el.remove());
+      if (elements.todayTimelineEmpty) {
+        elements.todayTimelineEmpty.style.display = todayBlocks.length === 0 ? 'flex' : 'none';
+        elements.todayTimelineEmpty.textContent = isAdmin
+          ? 'タスクカード右端の 🕘 をドラッグして9〜18時のラインに置いてください'
+          : '今日の予定はまだ登録されていません';
+      }
+      const laid = layoutTodayColumns(todayBlocks);
+      const html = laid.map(b => {
+        const t = tasks.find(x => x.id === b.taskId);
+        const title = t ? (t.title || '(無題)') : '(削除済みタスク)';
+        const top = pxFromMinSinceStart(b.startMin);
+        const height = Math.max(20, (b.endMin - b.startMin) * TODAY_PX_PER_MIN - 2);
+        const widthPct = 96 / b._totalCols;
+        const leftPct = 2 + b._col * widthPct;
+        return `<div class="today-block" data-id="${b.id}" style="top:${top}px;height:${height}px;left:${leftPct}%;width:calc(${widthPct}% - 4px)">
+          <button type="button" class="today-block-remove" data-action="remove" title="今日から外す">×</button>
+          <span class="today-block-title">${escapeHtml(title)}</span>
+          <span class="today-block-time">${minutesToTimeLabel(b.startMin)} - ${minutesToTimeLabel(b.endMin)}</span>
+          <div class="today-block-resize" data-action="resize"></div>
+        </div>`;
+      }).join('');
+      elements.todayTimelineGrid.insertAdjacentHTML('beforeend', html);
+    }
+    async function loadTodaySchedule() {
+      if (!db) return;
+      todayPanelDateString = todayDateString();
+      if (elements.todayPanelDate) {
+        const d = new Date();
+        elements.todayPanelDate.textContent = `${d.getMonth()+1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
+      }
+      try {
+        const q = query(
+          collection(db, 'day_schedules'),
+          where('user', '==', ADMIN_EMAIL),
+          where('date', '==', todayPanelDateString)
+        );
+        const snap = await getDocs(q);
+        todayBlocks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.error('loadTodaySchedule error', e);
+        todayBlocks = [];
+      }
+    }
+    async function renderTodayPanel() {
+      if (!elements.todayPanel) return;
+      if (window.matchMedia('(max-width: 1023px)').matches) {
+        elements.todayPanel.style.display = 'none';
+        return;
+      }
+      elements.todayPanel.style.display = '';
+      elements.todayPanel.classList.toggle('view-only', !isAdmin);
+      renderTodayHours();
+      await loadTodaySchedule();
+      renderTodayBlocks();
+      if (typeof updateTodayLocationChip === 'function') updateTodayLocationChip();
+      if (!todayPanelInitialized) {
+        initTodayPanelEvents();
+        todayPanelInitialized = true;
+      }
+    }
+    async function addTodayBlock(taskId, startMinRaw) {
+      if (!currentUser) { showToast('ログインしてください'); return; }
+      const start = clampTodayMin(snapTodayMin(startMinRaw));
+      let end = clampTodayMin(start + TODAY_DEFAULT_DURATION);
+      if (end - start < TODAY_SNAP_MIN) end = clampTodayMin(start + TODAY_SNAP_MIN);
+      try {
+        const docRef = await addDoc(collection(db, 'day_schedules'), {
+          user: currentUser.email,
+          date: todayPanelDateString,
+          taskId,
+          startMin: start,
+          endMin: end,
+          createdAt: new Date().toISOString()
+        });
+        todayBlocks.push({ id: docRef.id, taskId, startMin: start, endMin: end, user: currentUser.email, date: todayPanelDateString });
+        renderTodayBlocks();
+      } catch (e) {
+        console.error('addTodayBlock error', e);
+        showToast('今日のタスク追加に失敗しました: ' + (e.code || e.message));
+      }
+    }
+    async function updateTodayBlock(id, fields) {
+      try {
+        await updateDoc(doc(db, 'day_schedules', id), fields);
+        const b = todayBlocks.find(x => x.id === id);
+        if (b) Object.assign(b, fields);
+      } catch (e) {
+        console.error('updateTodayBlock', e);
+        showToast('更新に失敗しました');
+      }
+    }
+    async function removeTodayBlock(id) {
+      try {
+        await deleteDoc(doc(db, 'day_schedules', id));
+        todayBlocks = todayBlocks.filter(b => b.id !== id);
+        renderTodayBlocks();
+      } catch (e) {
+        console.error('removeTodayBlock', e);
+        showToast('削除に失敗しました');
+      }
+    }
+    function initTodayPanelEvents() {
+      const grid = elements.todayTimelineGrid;
+      if (!grid) return;
+      grid.addEventListener('dragover', (e) => {
+        if (!isAdmin) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        grid.classList.add('drag-over');
+      });
+      grid.addEventListener('dragleave', (e) => {
+        if (e.target === grid) grid.classList.remove('drag-over');
+      });
+      grid.addEventListener('drop', async (e) => {
+        if (!isAdmin) return;
+        e.preventDefault();
+        grid.classList.remove('drag-over');
+        const taskId = e.dataTransfer.getData('text/x-task-id') || e.dataTransfer.getData('text/plain');
+        if (!taskId) return;
+        const rect = grid.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        await addTodayBlock(taskId, minSinceStartFromPx(y));
+      });
+      grid.addEventListener('click', async (e) => {
+        if (!isAdmin) return;
+        const remBtn = e.target.closest('[data-action="remove"]');
+        if (!remBtn) return;
+        const block = remBtn.closest('.today-block');
+        if (block && block.dataset.id) await removeTodayBlock(block.dataset.id);
+      });
+
+      let resizing = null;
+      let moving = null;
+      let dirty = false;
+      grid.addEventListener('pointerdown', (e) => {
+        if (!isAdmin) return;
+        const resizeHandle = e.target.closest('.today-block-resize');
+        const block = e.target.closest('.today-block');
+        if (!block) return;
+        if (e.target.closest('[data-action="remove"]')) return;
+        const id = block.dataset.id;
+        const b = todayBlocks.find(x => x.id === id);
+        if (!b) return;
+        if (resizeHandle) {
+          resizing = { id, startY: e.clientY, startEndMin: b.endMin };
+        } else {
+          moving = { id, startY: e.clientY, startStartMin: b.startMin, startEndMin: b.endMin };
+        }
+        dirty = false;
+        block.setPointerCapture(e.pointerId);
+        block.classList.add('dragging');
+      });
+      grid.addEventListener('pointermove', (e) => {
+        if (resizing) {
+          const dy = e.clientY - resizing.startY;
+          const newEnd = clampTodayMin(snapTodayMin(resizing.startEndMin + dy / TODAY_PX_PER_MIN));
+          const b = todayBlocks.find(x => x.id === resizing.id);
+          if (b && newEnd > b.startMin && b.endMin !== newEnd) {
+            b.endMin = newEnd;
+            dirty = true;
+            renderTodayBlocks();
+          }
+        } else if (moving) {
+          const dy = e.clientY - moving.startY;
+          const dur = moving.startEndMin - moving.startStartMin;
+          let newStart = snapTodayMin(moving.startStartMin + dy / TODAY_PX_PER_MIN);
+          newStart = Math.max(TODAY_PANEL_START_MIN, Math.min(TODAY_PANEL_END_MIN - dur, newStart));
+          const b = todayBlocks.find(x => x.id === moving.id);
+          if (b && b.startMin !== newStart) {
+            b.startMin = newStart;
+            b.endMin = newStart + dur;
+            dirty = true;
+            renderTodayBlocks();
+          }
+        }
+      });
+      grid.addEventListener('pointerup', async () => {
+        if (resizing && dirty) {
+          const b = todayBlocks.find(x => x.id === resizing.id);
+          if (b) await updateTodayBlock(resizing.id, { endMin: b.endMin });
+        } else if (moving && dirty) {
+          const b = todayBlocks.find(x => x.id === moving.id);
+          if (b) await updateTodayBlock(moving.id, { startMin: b.startMin, endMin: b.endMin });
+        }
+        resizing = null; moving = null; dirty = false;
+      });
+      grid.addEventListener('pointercancel', () => { resizing = null; moving = null; dirty = false; });
+    }
+
+    // タスクカードの schedule-handle からの HTML5 ドラッグ起点
+    document.addEventListener('dragstart', (e) => {
+      const handle = e.target && e.target.closest && e.target.closest('.schedule-handle');
+      if (!handle) return;
+      const taskId = handle.dataset.taskId;
+      if (!taskId) return;
+      try {
+        e.dataTransfer.setData('text/x-task-id', taskId);
+        e.dataTransfer.setData('text/plain', taskId);
+        e.dataTransfer.effectAllowed = 'copy';
+      } catch (_) {}
+    });
+
+    // ===================================================
+    // 場所（ロケーション）
+    // ===================================================
+    const LOCATION_PRESET_COLORS = {
+      '本社': '#D4EDDA',
+      '名古屋': '#FFE0B2',
+      '大阪': '#F8D7DA'
+    };
+    let locations = [];        // [{id, name, color, startDate, endDate, createdAt}]
+    let locationByDate = {};   // {'YYYY-MM-DD': {name, color}}
+
+    function rebuildLocationIndex() {
+      locationByDate = {};
+      // createdAt昇順 → 後勝ちで上書き
+      const sorted = [...locations].sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      sorted.forEach((loc) => {
+        if (!loc.startDate || !loc.endDate) return;
+        let cur = loc.startDate;
+        let safety = 0;
+        while (cur <= loc.endDate && safety < 366) {
+          locationByDate[cur] = { name: loc.name, color: loc.color };
+          cur = addDaysToDateString(cur, 1);
+          safety += 1;
+        }
+      });
+    }
+
+    async function loadLocations() {
+      if (!db) return;
+      try {
+        const snap = await getDocs(query(collection(db, 'locations'), orderBy('createdAt', 'asc')));
+        locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        rebuildLocationIndex();
+      } catch (e) {
+        console.error('loadLocations error', e);
+        locations = [];
+        locationByDate = {};
+      }
+    }
+
+    function applyLocationToCalendarCell(info) {
+      if (!info || !info.date || !info.el) return;
+      const dateStr = formatCalendarDate(info.date);
+      const loc = locationByDate[dateStr];
+      if (loc) {
+        info.el.classList.add('has-location');
+        info.el.style.setProperty('--location-bg', loc.color);
+        info.el.setAttribute('title', loc.name);
+      } else {
+        info.el.classList.remove('has-location');
+        info.el.style.removeProperty('--location-bg');
+      }
+    }
+
+    function refreshAllCalendars() {
+      try { fcCalendarInstance && fcCalendarInstance.render(); } catch (_) {}
+      try { fcCalendarInlineInstance && fcCalendarInlineInstance.render(); } catch (_) {}
+      try { fcCalendarMobileInstance && fcCalendarMobileInstance.render(); } catch (_) {}
+    }
+
+    function updateTodayLocationChip() {
+      if (!elements.todayLocationChip) return;
+      const today = todayDateString();
+      const loc = locationByDate[today];
+      const chip = elements.todayLocationChip;
+      if (loc) {
+        chip.textContent = `📍 ${loc.name}`;
+        chip.style.background = loc.color;
+        chip.classList.remove('is-empty');
+      } else {
+        chip.textContent = '場所未設定';
+        chip.style.background = '';
+        chip.classList.add('is-empty');
+      }
+    }
+
+    function renderLocationList() {
+      if (!elements.locationList) return;
+      if (locations.length === 0) {
+        elements.locationList.innerHTML = '<div class="location-list-empty">登録された場所はありません</div>';
+        return;
+      }
+      const sorted = [...locations].sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+      elements.locationList.innerHTML = sorted.map(loc => `
+        <div class="location-list-item" data-id="${loc.id}">
+          <span class="location-list-swatch" style="background:${escapeHtml(loc.color)}"></span>
+          <div class="location-list-text">
+            <div class="location-list-name">${escapeHtml(loc.name)}</div>
+            <div class="location-list-range">${escapeHtml(loc.startDate)} 〜 ${escapeHtml(loc.endDate)}</div>
+          </div>
+          <button type="button" class="btn-location-delete" data-action="delete-location" title="削除">✕</button>
+        </div>
+      `).join('');
+    }
+
+    async function reloadAndRenderLocations() {
+      await loadLocations();
+      renderLocationList();
+      updateTodayLocationChip();
+      refreshAllCalendars();
+    }
+
+    function openLocationModal() {
+      if (!isAdmin) return;
+      elements.locationModal.classList.add('active');
+      if (typeof onModalOpen === 'function') onModalOpen();
+      elements.locationPreset.value = '本社';
+      elements.locationCustomWrap.style.display = 'none';
+      elements.locationCustomName.value = '';
+      elements.locationCustomColor.value = '#E1BEE7';
+      const today = todayDateString();
+      elements.locationStart.value = today;
+      elements.locationEnd.value = today;
+      elements.locationError.style.display = 'none';
+      renderLocationList();
+    }
+    function closeLocationModal() {
+      if (elements.locationModal.classList.contains('active') && typeof onModalClose === 'function') onModalClose();
+      elements.locationModal.classList.remove('active');
+    }
+
+    elements.btnOpenLocation?.addEventListener('click', async () => {
+      openLocationModal();
+      await reloadAndRenderLocations();
+    });
+    elements.btnCloseLocation?.addEventListener('click', closeLocationModal);
+    elements.locationModal?.addEventListener('click', (e) => {
+      if (e.target === elements.locationModal) closeLocationModal();
+    });
+    elements.locationPreset?.addEventListener('change', () => {
+      const isCustom = elements.locationPreset.value === 'custom';
+      elements.locationCustomWrap.style.display = isCustom ? 'block' : 'none';
+    });
+    elements.locationList?.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action="delete-location"]');
+      if (!btn) return;
+      const item = btn.closest('.location-list-item');
+      if (!item) return;
+      const id = item.dataset.id;
+      const confirmed = await confirmDialog('deleteLocation', {
+        title: '場所の削除',
+        message: 'この場所を削除しますか？',
+        danger: true
+      });
+      if (!confirmed) return;
+      try {
+        await deleteDoc(doc(db, 'locations', id));
+        await reloadAndRenderLocations();
+      } catch (err) {
+        console.error('delete location error', err);
+        showToast('削除に失敗しました');
+      }
+    });
+    elements.locationForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      elements.locationError.style.display = 'none';
+      elements.btnSubmitLocation.disabled = true;
+      try {
+        const preset = elements.locationPreset.value;
+        let name, color;
+        if (preset === 'custom') {
+          name = elements.locationCustomName.value.trim();
+          color = elements.locationCustomColor.value;
+          if (!name) throw { code: 'invalid-name' };
+        } else {
+          name = preset;
+          color = LOCATION_PRESET_COLORS[preset];
+        }
+        const start = elements.locationStart.value;
+        const end = elements.locationEnd.value;
+        if (!start || !end) throw { code: 'invalid-date' };
+        if (start > end) throw { code: 'invalid-range' };
+        await addDoc(collection(db, 'locations'), {
+          name, color,
+          startDate: start,
+          endDate: end,
+          createdAt: new Date().toISOString(),
+          createdBy: currentUser?.email || 'unknown'
+        });
+        elements.locationForm.reset();
+        elements.locationCustomWrap.style.display = 'none';
+        elements.locationStart.value = todayDateString();
+        elements.locationEnd.value = todayDateString();
+        elements.locationPreset.value = '本社';
+        await reloadAndRenderLocations();
+      } catch (err) {
+        const code = err.code || '';
+        let msg = '追加に失敗しました';
+        if (code === 'invalid-name') msg = '場所名を入力してください';
+        else if (code === 'invalid-date') msg = '開始日と終了日を入力してください';
+        else if (code === 'invalid-range') msg = '終了日は開始日以降にしてください';
+        elements.locationError.textContent = `${msg} ${code ? '(' + code + ')' : ''}`;
+        elements.locationError.style.display = 'block';
+      } finally {
+        elements.btnSubmitLocation.disabled = false;
+      }
+    });
 
     function initMobileCalendar() {
       const calEl = document.getElementById('fcCalendarMobile');
@@ -4112,7 +4874,8 @@
           if (local) local.deadline = newDate;
           await renderMainHighlights();
         },
-        eventDidMount: markHolidayDayCell
+        eventDidMount: markHolidayDayCell,
+        dayCellDidMount: applyLocationToCalendarCell
       });
       fcCalendarMobileInstance.render();
       attachMobileCalendarSwipe(calEl);
