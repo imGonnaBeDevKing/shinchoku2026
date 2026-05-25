@@ -2053,9 +2053,15 @@
   #fcCalendar .fc-day-today,
   #fcCalendarInline .fc-day-today,
   #fcCalendarMobile .fc-day-today {
-    background: transparent !important;
+    --fc-today-bg-color: transparent;
     box-shadow: inset 0 0 0 2px #007AFF;
     border-radius: 2px;
+  }
+  /* 今日かつ場所ありのセル: 場所色を優先で表示 */
+  #fcCalendar .fc-day-today.has-location,
+  #fcCalendarInline .fc-day-today.has-location,
+  #fcCalendarMobile .fc-day-today.has-location {
+    background-color: var(--location-bg) !important;
   }
   #fcCalendar .fc-day-sun .fc-daygrid-day-number,
   #fcCalendarInline .fc-day-sun .fc-daygrid-day-number,
