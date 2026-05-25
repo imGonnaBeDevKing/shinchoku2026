@@ -4832,6 +4832,10 @@
         const end = elements.locationEnd.value;
         if (!start || !end) throw { code: 'invalid-date' };
         if (start > end) throw { code: 'invalid-range' };
+        // 日付が重なる既存の場所を自動削除（上書き）
+        const overlapping = locations.filter(loc => loc.startDate && loc.endDate
+          && loc.startDate <= end && loc.endDate >= start);
+        await Promise.all(overlapping.map(loc => deleteDoc(doc(db, 'locations', loc.id))));
         await addDoc(collection(db, 'locations'), {
           name, color,
           startDate: start,
