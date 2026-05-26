@@ -2134,7 +2134,21 @@
       font-size: 11px;
       color: #8B5A00;
       font-weight: 500;
+      margin-left: auto;
     }
+    .advice-generate-btn {
+      background: #FF9500;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .advice-generate-btn:hover { background: #E08400; }
+    .advice-generate-btn:disabled { opacity: 0.5; cursor: wait; }
     .advice-panel-body {
       padding: var(--space-md) var(--space-lg);
       display: flex;
@@ -2698,14 +2712,15 @@
         <div id="fcCalendarMobile"></div>
       </div>
 
-      <!-- PC版: 今日のアドバイス掲示板（Claude Cowork 自動生成・読み取り専用） -->
+      <!-- PC版: 今日のアドバイス掲示板（ルールベース・ボタン生成） -->
       <aside class="advice-panel" id="advicePanel" aria-label="今日のアドバイス">
         <div class="advice-panel-header">
           <h3 class="advice-panel-title">今日のアドバイス</h3>
           <span class="advice-panel-meta" id="advicePanelMeta">--</span>
+          <button type="button" class="advice-generate-btn" id="adviceGenerateBtn" title="今日のアドバイスを生成">🌟 生成</button>
         </div>
         <div class="advice-panel-body" id="advicePanelBody">
-          <div class="advice-empty">今朝のアドバイスはまだ生成されていません</div>
+          <div class="advice-empty">今朝のアドバイスはまだ生成されていません。右上「🌟 生成」を押してください</div>
         </div>
       </aside>
 
@@ -3008,6 +3023,7 @@
       collection,
       getDocs,
       getDoc,
+      setDoc,
       addDoc,
       updateDoc,
       deleteDoc,
@@ -3094,6 +3110,7 @@
       advicePanel: document.getElementById('advicePanel'),
       advicePanelMeta: document.getElementById('advicePanelMeta'),
       advicePanelBody: document.getElementById('advicePanelBody'),
+      adviceGenerateBtn: document.getElementById('adviceGenerateBtn'),
       btnOpenLocation: document.getElementById('btnOpenLocation'),
       btnCloseLocation: document.getElementById('btnCloseLocation'),
       locationModal: document.getElementById('locationModal'),
@@ -4909,6 +4926,10 @@
       }
       renderWeekPanel();
       loadTodayAdvice();
+      if (elements.adviceGenerateBtn && !elements.adviceGenerateBtn._wired) {
+        elements.adviceGenerateBtn.addEventListener('click', generateLocalAdvice);
+        elements.adviceGenerateBtn._wired = true;
+      }
     }
 
     // ===================================================
@@ -4950,6 +4971,129 @@
         elements.advicePanelBody.innerHTML = `<div class="advice-empty">${escapeHtml(msg)}</div>`;
       }
     }
+    function daysUntilDeadline(deadlineStr) {
+      if (!deadlineStr) return null;
+      const d = new Date(deadlineStr);
+      if (isNaN(d.getTime())) return null;
+      const t = new Date();
+      t.setHours(0, 0, 0, 0);
+      d.setHours(0, 0, 0, 0);
+      return Math.round((d.getTime() - t.getTime()) / 86400000);
+    }
+
+    async function generateLocalAdvice() {
+      if (!elements.adviceGenerateBtn) return;
+      if (!currentUser) { showToast('ログインしてください'); return; }
+      elements.adviceGenerateBtn.disabled = true;
+      elements.adviceGenerateBtn.textContent = '⏳ 生成中…';
+      try {
+        const openTasks = tasks.filter(t => !toBool(t.completed));
+
+        // 1) ranked_tasks: priority(高い順) → daysUntilDeadline(短い順) → title
+        const scored = openTasks.map(t => {
+          const days = daysUntilDeadline(t.deadline);
+          // 期限なしは大きな値、期限超過はマイナスでより上位
+          const sortDays = days === null ? 9999 : days;
+          const priorityScore = Number(t.priority) || 0;
+          return { task: t, days, sortDays, priorityScore };
+        });
+        scored.sort((a, b) => {
+          if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
+          return a.sortDays - b.sortDays;
+        });
+        const ranked_tasks = scored.slice(0, 3).map((s, i) => {
+          const dayLabel = s.days === null ? '期限なし'
+            : s.days < 0 ? `${Math.abs(s.days)}日超過`
+            : s.days === 0 ? '本日期限'
+            : `あと${s.days}日`;
+          return `【${i + 1}位】${s.task.title || '(無題)'}（${dayLabel}）`;
+        });
+
+        // 2) deadline_warnings: 期限あり かつ ≤3日
+        const warnings = openTasks
+          .map(t => ({ task: t, days: daysUntilDeadline(t.deadline) }))
+          .filter(x => x.days !== null && x.days <= 3)
+          .sort((a, b) => a.days - b.days);
+        const deadline_warnings = warnings.map(w => {
+          if (w.days < 0) return `🔴 ${Math.abs(w.days)}日超過: ${w.task.title || '(無題)'}`;
+          if (w.days === 0) return `🔴 本日期限: ${w.task.title || '(無題)'}`;
+          return `⚠ あと${w.days}日: ${w.task.title || '(無題)'}`;
+        });
+
+        // 3) overall_comment
+        const counts = {
+          total: tasks.length,
+          open: openTasks.length,
+          overdue: openTasks.filter(t => {
+            const d = daysUntilDeadline(t.deadline);
+            return d !== null && d < 0;
+          }).length,
+          dueIn3: warnings.length,
+          completed: tasks.filter(t => toBool(t.completed)).length,
+        };
+        let overall_comment;
+        if (counts.overdue >= 3) {
+          overall_comment = `期限超過が${counts.overdue}件溜まっています。今日は最低でも1件、完了させましょう。`;
+        } else if (counts.dueIn3 >= 3) {
+          overall_comment = `今週中に期限を迎えるタスクが${counts.dueIn3}件あります。優先度上位3件に集中する日です。`;
+        } else if (counts.open >= 20) {
+          overall_comment = `抱えているタスクが${counts.open}件と多めです。今日は新規追加より、消化に時間を使いましょう。`;
+        } else if (counts.open === 0) {
+          overall_comment = `未完了タスクはありません。素晴らしい状態です。次の準備期間に充てましょう。`;
+        } else if (counts.overdue === 0 && counts.dueIn3 === 0) {
+          overall_comment = `期限に余裕があります。優先度上位の${Math.min(3, counts.open)}件を今日のうちに進めて、未来の自分にバトンを渡しましょう。`;
+        } else {
+          overall_comment = `現在 ${counts.open}件のタスクを抱えています（うち期限近${counts.dueIn3}件・超過${counts.overdue}件）。今日も着実に。`;
+        }
+
+        // 4) retry_suggestions: 昨日のday_schedulesでタスク未完了のもの
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+        let retry_suggestions = [];
+        try {
+          const ysQ = query(
+            collection(db, 'day_schedules'),
+            where('user', '==', currentUser.email),
+            where('date', '==', yStr)
+          );
+          const ysSnap = await getDocs(ysQ);
+          const seen = new Set();
+          ysSnap.docs.forEach(d => {
+            const data = d.data();
+            const t = tasks.find(x => x.id === data.taskId);
+            if (!t || toBool(t.completed)) return;
+            if (seen.has(t.id)) return;
+            seen.add(t.id);
+            retry_suggestions.push(`昨日も予定していた『${t.title || '(無題)'}』、今日も時間を取りますか？`);
+          });
+        } catch (e) {
+          console.warn('yesterday schedules fetch failed', e);
+        }
+
+        const payload = {
+          user: currentUser.email,
+          date: todayDateString(),
+          ranked_tasks,
+          deadline_warnings,
+          overall_comment,
+          retry_suggestions,
+          generatedAt: new Date().toISOString(),
+        };
+
+        const docId = `${currentUser.email}_${todayDateString()}`;
+        await setDoc(doc(db, 'daily_advice', docId), payload);
+        renderAdviceCard(payload);
+        showToast('今日のアドバイスを生成しました');
+      } catch (e) {
+        console.error('generateLocalAdvice error', e);
+        showToast('アドバイス生成に失敗しました: ' + (e.code || e.message));
+      } finally {
+        elements.adviceGenerateBtn.disabled = false;
+        elements.adviceGenerateBtn.textContent = '🌟 生成';
+      }
+    }
+
     function renderAdviceCard(data) {
       if (!elements.advicePanelBody) return;
       const generatedAt = data.generatedAt
