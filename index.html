@@ -2099,10 +2099,30 @@
     }
     .week-grid {
       display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 1px;
       background: var(--border-color);
       padding: 1px;
+    }
+    .week-panel.show-weekend .week-grid {
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+    .week-day.is-hidden { display: none !important; }
+    .week-weekend-toggle {
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .week-weekend-toggle:hover { background: #EAEAEF; color: var(--text-primary); }
+    .week-panel.show-weekend .week-weekend-toggle {
+      background: var(--color-jun);
+      color: #fff;
+      border-color: var(--color-jun);
     }
     .week-day {
       background: var(--bg-secondary);
@@ -2145,15 +2165,30 @@
       overflow: hidden;
     }
     .week-task {
-      display: flex;
-      align-items: flex-start;
-      gap: 6px;
-      padding: 4px 6px;
+      position: relative;
+      display: grid;
+      grid-template-columns: 11px 1fr 14px;
+      grid-template-rows: auto auto;
+      column-gap: 4px;
+      row-gap: 1px;
+      padding: 3px 5px;
       background: var(--bg-primary);
       border-radius: 4px;
-      font-size: 12px;
-      line-height: 1.35;
+      font-size: 10px;
+      line-height: 1.25;
       border-left: 3px solid var(--color-jun);
+    }
+    .week-task .week-task-check { grid-column: 1; grid-row: 1; font-size: 9px; }
+    .week-task .week-task-time  { grid-column: 2; grid-row: 1; font-size: 9px; }
+    .week-task .week-task-remove{ grid-column: 3; grid-row: 1; font-size: 11px; }
+    .week-task .week-task-title {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      padding-left: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 10px;
     }
     .week-task.is-completed {
       opacity: 0.55;
@@ -2543,8 +2578,9 @@
           <h3 class="week-panel-title">週のタスクメモ</h3>
           <span class="week-panel-range" id="weekPanelRange">--</span>
           <div class="week-panel-nav">
+            <button type="button" class="week-weekend-toggle" id="weekWeekendToggle" aria-pressed="false" title="土日の表示切替">土日</button>
             <button type="button" class="week-nav-btn" id="weekNavPrev" aria-label="前の週">← 前週</button>
-            <button type="button" class="week-nav-btn is-today" id="weekNavToday">今週</button>
+            <button type="button" class="week-nav-btn" id="weekNavToday" title="今週に戻る">今週</button>
             <button type="button" class="week-nav-btn" id="weekNavNext" aria-label="次の週">次週 →</button>
           </div>
         </div>
@@ -2892,6 +2928,7 @@
       weekNavPrev: document.getElementById('weekNavPrev'),
       weekNavNext: document.getElementById('weekNavNext'),
       weekNavToday: document.getElementById('weekNavToday'),
+      weekWeekendToggle: document.getElementById('weekWeekendToggle'),
       btnOpenLocation: document.getElementById('btnOpenLocation'),
       btnCloseLocation: document.getElementById('btnCloseLocation'),
       locationModal: document.getElementById('locationModal'),
@@ -4774,6 +4811,13 @@
       if (elements.weekPanelRange) {
         elements.weekPanelRange.textContent = `${startLabel} 〜 ${endLabel}`;
       }
+      if (elements.weekNavToday) {
+        const isCurrentWeek = isSameDate(weekViewStart, mondayOf(new Date()));
+        elements.weekNavToday.classList.toggle('is-today', !isCurrentWeek);
+        elements.weekNavToday.disabled = isCurrentWeek;
+        elements.weekNavToday.style.opacity = isCurrentWeek ? '0.5' : '';
+        elements.weekNavToday.style.cursor = isCurrentWeek ? 'default' : 'pointer';
+      }
       const byDate = {};
       weekBlocks.forEach(b => {
         if (!byDate[b.date]) byDate[b.date] = [];
@@ -4788,7 +4832,8 @@
           'week-day',
           isSameDate(d, today) ? 'is-today' : '',
           dow === 0 ? 'is-sun' : '',
-          dow === 6 ? 'is-sat' : ''
+          dow === 6 ? 'is-sat' : '',
+          (dow === 0 || dow === 6) ? 'is-weekend' : ''
         ].filter(Boolean).join(' ');
         const blocks = byDate[dstr] || [];
         const body = blocks.length === 0
@@ -4834,12 +4879,26 @@
         initWeekPanelEvents();
         weekPanelInitialized = true;
       }
+      applyWeekendVisibility();
     }
     function shiftWeek(deltaDays) {
       if (!weekViewStart) weekViewStart = mondayOf(new Date());
       const d = new Date(weekViewStart.getFullYear(), weekViewStart.getMonth(), weekViewStart.getDate() + deltaDays);
       weekViewStart = d;
       renderWeekPanel();
+    }
+    function applyWeekendVisibility() {
+      if (!elements.weekPanel) return;
+      const show = localStorage.getItem('weekShowWeekend') === '1';
+      elements.weekPanel.classList.toggle('show-weekend', show);
+      if (elements.weekGrid) {
+        elements.weekGrid.querySelectorAll('.week-day.is-weekend').forEach(el => {
+          el.classList.toggle('is-hidden', !show);
+        });
+      }
+      if (elements.weekWeekendToggle) {
+        elements.weekWeekendToggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+      }
     }
     function initWeekPanelEvents() {
       if (elements.weekNavPrev) elements.weekNavPrev.addEventListener('click', () => shiftWeek(-7));
@@ -4848,6 +4907,12 @@
         weekViewStart = mondayOf(new Date());
         renderWeekPanel();
       });
+      if (elements.weekWeekendToggle) elements.weekWeekendToggle.addEventListener('click', () => {
+        const next = localStorage.getItem('weekShowWeekend') !== '1';
+        localStorage.setItem('weekShowWeekend', next ? '1' : '0');
+        applyWeekendVisibility();
+      });
+      applyWeekendVisibility();
       if (elements.weekGrid) {
         elements.weekGrid.addEventListener('click', async (e) => {
           const btn = e.target.closest('[data-action="week-remove"]');
