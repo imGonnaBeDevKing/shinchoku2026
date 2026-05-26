@@ -1819,6 +1819,7 @@
   }
   .right-column { display: contents; }
   .today-panel { display: none; }
+  .advice-panel { display: none; }
 
   /* スマホ版カレンダー（デフォルト表示） */
   .calendar-panel-mobile {
@@ -2089,6 +2090,111 @@
     /* PC版では「暦」ボタンは冗長なので非表示 */
     #btnOpenCalendar {
       display: none !important;
+    }
+    /* PC: 2x2グリッド明示配置（advice|today / highlights|calendar / week全幅） */
+    .main-highlights { grid-column: 1; grid-row: 2; }
+    .today-panel     { grid-column: 2; grid-row: 1; }
+    .calendar-panel  { grid-column: 2; grid-row: 2; }
+    .advice-panel    { grid-column: 1; grid-row: 1; }
+    .week-panel      { grid-column: 1 / -1; grid-row: 3; }
+
+    /* 今日のアドバイス掲示板（Claude Cowork 自動生成） */
+    .advice-panel {
+      display: block;
+      grid-column: 1;
+      background: linear-gradient(135deg, #FFF9E6 0%, #FFE4B5 100%);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-light);
+      border: 3px solid #FFB84D;
+      overflow: hidden;
+    }
+    .advice-panel-header {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid rgba(255, 184, 77, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      background: rgba(255, 255, 255, 0.4);
+    }
+    .advice-panel-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #8B5A00;
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .advice-panel-title::before {
+      content: '☀';
+      font-size: 18px;
+    }
+    .advice-panel-meta {
+      font-size: 11px;
+      color: #8B5A00;
+      font-weight: 500;
+    }
+    .advice-panel-body {
+      padding: var(--space-md) var(--space-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .advice-section {
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .advice-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #8B5A00;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0 0 4px 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .advice-section-body {
+      font-size: 12px;
+      color: #3A2A00;
+      line-height: 1.5;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .advice-section-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .advice-section-list li {
+      font-size: 12px;
+      color: #3A2A00;
+      line-height: 1.4;
+      padding-left: 16px;
+      position: relative;
+    }
+    .advice-section-list li::before {
+      content: '▸';
+      position: absolute;
+      left: 4px;
+      color: #FF9500;
+      font-weight: 700;
+    }
+    .advice-empty {
+      padding: 16px;
+      text-align: center;
+      color: #8B5A00;
+      font-size: 12px;
+      font-style: italic;
     }
     /* 週カード（PC専用） */
     .week-panel {
@@ -2592,29 +2698,40 @@
         <div id="fcCalendarMobile"></div>
       </div>
 
-      <!-- PC版: 右カラム（今日のタスク上 / カレンダー下） -->
-      <div class="right-column">
-        <aside class="today-panel" id="todayPanel">
-          <div class="today-panel-header">
-            <h3 class="today-panel-title">今日のタスク</h3>
-            <span class="today-location-chip is-empty" id="todayLocationChip">場所未設定</span>
-            <span class="today-panel-date" id="todayPanelDate"></span>
+      <!-- PC版: 今日のアドバイス掲示板（Claude Cowork 自動生成・読み取り専用） -->
+      <aside class="advice-panel" id="advicePanel" aria-label="今日のアドバイス">
+        <div class="advice-panel-header">
+          <h3 class="advice-panel-title">今日のアドバイス</h3>
+          <span class="advice-panel-meta" id="advicePanelMeta">--</span>
+        </div>
+        <div class="advice-panel-body" id="advicePanelBody">
+          <div class="advice-empty">今朝のアドバイスはまだ生成されていません</div>
+        </div>
+      </aside>
+
+      <!-- PC版: 今日のタスク -->
+      <aside class="today-panel" id="todayPanel">
+        <div class="today-panel-header">
+          <h3 class="today-panel-title">今日のタスク</h3>
+          <span class="today-location-chip is-empty" id="todayLocationChip">場所未設定</span>
+          <span class="today-panel-date" id="todayPanelDate"></span>
+        </div>
+        <div class="today-timeline-wrap">
+          <div class="today-timeline-hours" id="todayTimelineHours"></div>
+          <div class="today-timeline-grid" id="todayTimelineGrid" data-drop="today">
+            <div class="today-timeline-empty" id="todayTimelineEmpty">タスクカード右端の 🕘 をドラッグして9〜18時のラインに置いてください</div>
           </div>
-          <div class="today-timeline-wrap">
-            <div class="today-timeline-hours" id="todayTimelineHours"></div>
-            <div class="today-timeline-grid" id="todayTimelineGrid" data-drop="today">
-              <div class="today-timeline-empty" id="todayTimelineEmpty">タスクカード右端の 🕘 をドラッグして9〜18時のラインに置いてください</div>
-            </div>
-          </div>
-        </aside>
-        <aside class="calendar-panel" id="calendarPanel">
-          <div class="calendar-panel-header">
-            <h3 class="calendar-panel-title">カレンダー</h3>
-            <div class="location-legend" id="locationLegend"></div>
-          </div>
-          <div id="fcCalendarInline"></div>
-        </aside>
-      </div>
+        </div>
+      </aside>
+
+      <!-- PC版: カレンダー -->
+      <aside class="calendar-panel" id="calendarPanel">
+        <div class="calendar-panel-header">
+          <h3 class="calendar-panel-title">カレンダー</h3>
+          <div class="location-legend" id="locationLegend"></div>
+        </div>
+        <div id="fcCalendarInline"></div>
+      </aside>
 
       <!-- PC版: 週のタスクメモカード（スクショAI報告書化用） -->
       <section class="week-panel" id="weekPanel" aria-label="週のタスクメモ">
@@ -2890,6 +3007,7 @@
       getFirestore,
       collection,
       getDocs,
+      getDoc,
       addDoc,
       updateDoc,
       deleteDoc,
@@ -2973,6 +3091,9 @@
       weekNavNext: document.getElementById('weekNavNext'),
       weekNavToday: document.getElementById('weekNavToday'),
       weekWeekendToggle: document.getElementById('weekWeekendToggle'),
+      advicePanel: document.getElementById('advicePanel'),
+      advicePanelMeta: document.getElementById('advicePanelMeta'),
+      advicePanelBody: document.getElementById('advicePanelBody'),
       btnOpenLocation: document.getElementById('btnOpenLocation'),
       btnCloseLocation: document.getElementById('btnCloseLocation'),
       locationModal: document.getElementById('locationModal'),
@@ -4787,6 +4908,78 @@
         todayPanelInitialized = true;
       }
       renderWeekPanel();
+      loadTodayAdvice();
+    }
+
+    // ===================================================
+    // 今日のアドバイス掲示板（Claude Cowork 自動生成・読み取り専用）
+    // Firestore: collection 'daily_advice', doc id = `${user}_${YYYY-MM-DD}`
+    // フィールド: { user, date, ranked_tasks: [string], deadline_warnings: [string],
+    //              overall_comment: string, retry_suggestions: [string], generatedAt }
+    // ===================================================
+    async function loadTodayAdvice() {
+      if (!elements.advicePanel) return;
+      if (window.matchMedia('(max-width: 1023px)').matches) {
+        elements.advicePanel.style.display = 'none';
+        return;
+      }
+      elements.advicePanel.style.display = '';
+      if (!db) {
+        renderAdviceEmpty('Firestore 未接続');
+        return;
+      }
+      const userEmail = (currentUser && currentUser.email) || ADMIN_EMAIL;
+      const today = todayDateString();
+      const docId = `${userEmail}_${today}`;
+      try {
+        const ref = doc(db, 'daily_advice', docId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          renderAdviceEmpty('今朝のアドバイスはまだ生成されていません');
+          return;
+        }
+        renderAdviceCard(snap.data());
+      } catch (e) {
+        console.error('loadTodayAdvice error', e);
+        renderAdviceEmpty('アドバイスの読み込みに失敗しました');
+      }
+    }
+    function renderAdviceEmpty(msg) {
+      if (elements.advicePanelMeta) elements.advicePanelMeta.textContent = '--';
+      if (elements.advicePanelBody) {
+        elements.advicePanelBody.innerHTML = `<div class="advice-empty">${escapeHtml(msg)}</div>`;
+      }
+    }
+    function renderAdviceCard(data) {
+      if (!elements.advicePanelBody) return;
+      const generatedAt = data.generatedAt
+        ? new Date(data.generatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '';
+      if (elements.advicePanelMeta) {
+        elements.advicePanelMeta.textContent = generatedAt ? `生成: ${generatedAt}` : '';
+      }
+      const parts = [];
+      const listSection = (label, icon, items) => {
+        if (!Array.isArray(items) || items.length === 0) return '';
+        const lis = items.map(x => `<li>${escapeHtml(String(x))}</li>`).join('');
+        return `<div class="advice-section">
+          <p class="advice-section-label">${icon} ${escapeHtml(label)}</p>
+          <ul class="advice-section-list">${lis}</ul>
+        </div>`;
+      };
+      const textSection = (label, icon, text) => {
+        if (!text) return '';
+        return `<div class="advice-section">
+          <p class="advice-section-label">${icon} ${escapeHtml(label)}</p>
+          <p class="advice-section-body">${escapeHtml(String(text))}</p>
+        </div>`;
+      };
+      parts.push(listSection('今日やるべき順', '🎯', data.ranked_tasks));
+      parts.push(listSection('期限迫り警告', '⚠️', data.deadline_warnings));
+      parts.push(textSection('全体評・やる気コメント', '💬', data.overall_comment));
+      parts.push(listSection('昨日のリトライ提案', '🔁', data.retry_suggestions));
+      const html = parts.filter(Boolean).join('');
+      elements.advicePanelBody.innerHTML = html || `<div class="advice-empty">アドバイス本文が空です</div>`;
     }
 
     // ===================================================
