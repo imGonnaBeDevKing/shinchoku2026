@@ -2950,6 +2950,23 @@
       gap: 0 !important;
     }
 
+    /* ヘッダー時計 */
+    .header-clock {
+      flex: 1;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 400;
+      color: #6e6e73;
+      letter-spacing: 0.3px;
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    @media (max-width: 640px) {
+      .header-clock { font-size: 10px; }
+    }
+
     /* ==== ヘッダーボタンを Apple globalnav リンク風に ==== */
     .header-actions .btn-hoshitori,
     .header-actions .btn-hoshitori-table,
@@ -3015,6 +3032,7 @@
   =================================================== -->
   <header class="department-header">
     <h1 class="department-title">塩崎</h1>
+    <div class="header-clock" id="headerClock" aria-live="polite" aria-atomic="true"></div>
     <div class="header-actions">
       <button class="btn-hoshitori-table" id="btnOpenHoshitori">
         星取
@@ -7411,6 +7429,27 @@
       keysToRemove.forEach(key => localStorage.removeItem(key));
       showToast('確認設定をリセットしました');
     }
+
+    // ===================================================
+    // ヘッダーリアルタイム時計
+    // ===================================================
+    (function initHeaderClock() {
+      const el = document.getElementById('headerClock');
+      if (!el) return;
+      const DAY_JA = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      function tick() {
+        const now = new Date();
+        const y  = now.getFullYear();
+        const mo = String(now.getMonth() + 1).padStart(2, '0');
+        const d  = String(now.getDate()).padStart(2, '0');
+        const wd = DAY_JA[now.getDay()];
+        const h  = String(now.getHours()).padStart(2, '0');
+        const mi = String(now.getMinutes()).padStart(2, '0');
+        el.textContent = `── ${y} / ${mo} / ${d} (${wd}) · ${h}:${mi} JST`;
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
 
     // ===================================================
     // 依頼確認カード（実タスク連動 + 依頼者プルダウン）
