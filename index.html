@@ -2391,8 +2391,21 @@
       font-size: 12px;
       color: var(--text-primary);
       line-height: 1.5;
+      cursor: text;
+      min-height: 32px;
+      border: 1px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
     }
-    .request-memo::before { content: '📝 '; }
+    .request-memo:hover { border-color: #C7C7CC; }
+    .request-memo:focus {
+      outline: none;
+      background: #fff;
+      border-color: #007AFF;
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.12);
+    }
+    .request-memo:empty::before { content: '📝 （クリックしてメモを入力）'; color: var(--text-secondary); }
+    .request-memo.is-placeholder { color: var(--text-secondary); }
+    .request-memo.is-placeholder::before { content: '📝 '; }
     .request-requester {
       display: flex;
       align-items: center;
@@ -7457,7 +7470,8 @@
           deadline: t.deadline ? fmtRequestMD(t.deadline) : '期限なし',
           progress: Number(t.progress) || 0,
           phase,
-          memo: t.memo || '（メモ未入力）',
+          memo: t.memo || '',
+          memoIsPlaceholder: !t.memo,
           ball: ball.key,
           ballLabel: ball.label || (ball.key === 'boss' ? '上司ボール (確認待ち)' : ball.key === 'external' ? '社外ボール' : '塩崎ボール'),
           updated: fmtRequestUpdated(t.updatedAt),
@@ -7487,6 +7501,37 @@
           if (target) target.requester = value;
           if (typeof updateTask === 'function' && id) {
             await updateTask(id, { requester: value, updatedAt: new Date().toISOString() });
+          }
+        });
+      });
+      // メモ編集 → Firestore tasks.memo に永続化（blur で保存）
+      list.querySelectorAll('.request-memo[contenteditable="true"]').forEach(el => {
+        el.addEventListener('focus', () => {
+          if (el.classList.contains('is-placeholder')) {
+            el.classList.remove('is-placeholder');
+            el.textContent = '';
+          }
+        });
+        el.addEventListener('blur', async () => {
+          const id = el.dataset.id;
+          const value = el.textContent.trim();
+          const target = (tasks || []).find(t => t.id === id);
+          if (target) target.memo = value;
+          if (typeof updateTask === 'function' && id) {
+            await updateTask(id, { memo: value, updatedAt: new Date().toISOString() });
+          }
+          if (!value) {
+            el.classList.add('is-placeholder');
+            el.textContent = '';
+          }
+        });
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            el.blur();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            el.blur();
           }
         });
       });
@@ -7536,7 +7581,7 @@
               <span class="request-meta-item">期限 <strong>${r.deadline}</strong></span>
               <span class="request-meta-item">進捗 <strong>${r.progress}%</strong></span>
             </div>
-            <div class="request-memo">${escapeHtml(r.memo)}</div>
+            <div class="request-memo${r.memoIsPlaceholder ? ' is-placeholder' : ''}" contenteditable="true" data-id="${r.id}" spellcheck="false">${escapeHtml(r.memo)}</div>
             <div class="request-requester">
               依頼者:
               <select class="request-requester-select" data-id="${r.id}">${userOptions}</select>
