@@ -2424,6 +2424,21 @@
       align-items: center;
       gap: 4px;
       min-width: 56px;
+      background: transparent;
+      border: 0;
+      padding: 4px 2px;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+    .request-phase-step:hover .request-phase-circle {
+      border-color: #007AFF;
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.12);
+    }
+    .request-phase-step:focus-visible {
+      outline: 2px solid #007AFF;
+      outline-offset: 2px;
+      border-radius: 4px;
     }
     .request-phase-circle {
       width: 22px; height: 22px;
@@ -7372,8 +7387,12 @@
     const REQUEST_USERS = ['塩崎', '田中', '山田', '鈴木', '部長', '社外A社', '社外B社'];
     const REQUEST_PHASES = ['依頼', '着手', '進行中', '完了報告', '確認済'];
 
-    function deriveRequestPhase(progress) {
-      const p = Number(progress) || 0;
+    function deriveRequestPhase(task) {
+      // 明示的に保存された phase があれば優先
+      if (task && typeof task === 'object' && Number.isInteger(task.phase) && task.phase >= 0 && task.phase <= 4) {
+        return task.phase;
+      }
+      const p = Number((task && typeof task === 'object') ? task.progress : task) || 0;
       if (p >= 100) return 4;
       if (p >= 80) return 3;
       if (p >= 30) return 2;
@@ -7426,7 +7445,7 @@
       // mainHighlights と同じ並び替え（compareTasks）
       const sorted = [...src].sort(compareTasks);
       return sorted.map(t => {
-        const phase = deriveRequestPhase(t.progress);
+        const phase = deriveRequestPhase(t);
         const ball = deriveRequestBall(t);
         const status = t.status || classifyTask(t) || 'jun';
         const stale = daysSince(t.updatedAt);
@@ -7471,6 +7490,20 @@
           }
         });
       });
+      // フェーズステップクリック → phase 更新（Firestore tasks に永続化）
+      list.querySelectorAll('.request-phase-step').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = btn.dataset.id;
+          const newPhase = Number(btn.dataset.phase);
+          if (!id || Number.isNaN(newPhase)) return;
+          const target = (tasks || []).find(t => t.id === id);
+          if (target) target.phase = newPhase;
+          if (typeof updateTask === 'function') {
+            await updateTask(id, { phase: newPhase, updatedAt: new Date().toISOString() });
+          }
+          renderRequestsPanel();
+        });
+      });
     }
 
     function renderRequestCard(r) {
@@ -7482,10 +7515,10 @@
         const connector = idx < REQUEST_PHASES.length - 1
           ? `<div class="request-phase-connector ${idx < r.phase ? 'done' : ''}"></div>`
           : '';
-        return `<div class="request-phase-step ${state}">
+        return `<button type="button" class="request-phase-step ${state}" data-id="${r.id}" data-phase="${idx}" aria-label="${label}に変更">
           <div class="request-phase-circle"></div>
           <div class="request-phase-label">${label}</div>
-        </div>${connector}`;
+        </button>${connector}`;
       }).join('');
       const stale = r.staleDays > 0
         ? `<span class="request-stale-badge">⚠ ${r.staleDays} 日更新なし</span>`
