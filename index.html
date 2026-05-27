@@ -1965,6 +1965,38 @@
     .today-timeline-grid.drag-over {
       background-color: rgba(0,122,255,0.06);
     }
+    .today-now-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 0;
+      border-top: 2px solid #007AFF;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .today-now-line::before {
+      content: '';
+      position: absolute;
+      left: -5px;
+      top: -5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #007AFF;
+    }
+    .today-now-label {
+      position: absolute;
+      right: 4px;
+      top: -10px;
+      background: #007AFF;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      line-height: 1.4;
+      letter-spacing: 0.3px;
+    }
     .today-timeline-empty {
       position: absolute;
       inset: 0;
@@ -4989,6 +5021,29 @@
         todayBlocks = [];
       }
     }
+    function renderTodayNowLine() {
+      const grid = elements.todayTimelineGrid;
+      if (!grid) return;
+      let line = grid.querySelector('.today-now-line');
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      if (nowMin < TODAY_PANEL_START_MIN || nowMin > TODAY_PANEL_END_MIN) {
+        if (line) line.remove();
+        return;
+      }
+      const top = pxFromMinSinceStart(nowMin);
+      const label = `NOW ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      if (!line) {
+        line = document.createElement('div');
+        line.className = 'today-now-line';
+        line.innerHTML = `<span class="today-now-label"></span>`;
+        grid.appendChild(line);
+      }
+      line.style.top = `${top}px`;
+      line.querySelector('.today-now-label').textContent = label;
+    }
+    let todayNowLineTimer = null;
+
     async function renderTodayPanel() {
       if (!elements.todayPanel) return;
       if (window.matchMedia('(max-width: 1023px)').matches) {
@@ -5001,6 +5056,10 @@
       renderTodayHours();
       await loadTodaySchedule();
       renderTodayBlocks();
+      renderTodayNowLine();
+      if (!todayNowLineTimer) {
+        todayNowLineTimer = setInterval(renderTodayNowLine, 60 * 1000);
+      }
       if (typeof updateTodayLocationChip === 'function') updateTodayLocationChip();
       if (!todayPanelInitialized) {
         initTodayPanelEvents();
