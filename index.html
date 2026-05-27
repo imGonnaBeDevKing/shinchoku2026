@@ -2183,6 +2183,7 @@
     .calendar-panel  { grid-column: 2; grid-row: 2; }
     .advice-panel    { grid-column: 1; grid-row: 1; }
     .week-panel      { grid-column: 1 / -1; grid-row: 3; }
+    .requests-panel  { grid-column: 1 / -1; grid-row: 4; }
 
     /* 今日のアドバイス掲示板（Claude Cowork 自動生成） */
     .advice-panel {
@@ -2296,6 +2297,199 @@
       font-size: 12px;
       font-style: italic;
     }
+    /* ===== 依頼確認カード（すべての依頼） ===== */
+    .requests-panel {
+      display: block;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-light);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+    .requests-panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .requests-panel-title { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary); }
+    .requests-panel-subtitle { font-size: 12px; color: var(--text-secondary); margin: 4px 0 0; }
+    .requests-panel-actions { display: flex; gap: 8px; }
+    .requests-filter, .requests-sort-btn {
+      font-size: 12px;
+      padding: 6px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .requests-list { display: flex; flex-direction: column; }
+    .request-card {
+      display: grid;
+      grid-template-columns: minmax(260px, 1.2fr) minmax(360px, 1.4fr) 180px;
+      gap: 20px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      align-items: center;
+    }
+    .request-card:last-child { border-bottom: 0; }
+
+    /* 左カラム: タイトル/メタ/メモ */
+    .request-card-left { min-width: 0; }
+    .request-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .request-status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px;
+    }
+    .request-status-dot.red { background: #FF3B30; }
+    .request-status-dot.orange { background: #FF9500; }
+    .request-status-dot.green { background: #34C759; }
+    .request-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .request-stale-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 11px;
+      color: #B8860B;
+      background: #FFF8E1;
+      border: 1px solid #FFE082;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .request-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .request-meta-item strong { color: var(--text-primary); font-weight: 600; }
+    .request-memo {
+      background: #F5F5F7;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+    .request-memo::before { content: '📝 '; }
+    .request-requester {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .request-requester select {
+      font-size: 11px;
+      padding: 2px 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: #fff;
+      color: var(--text-primary);
+    }
+
+    /* 中央: フェーズステップ */
+    .request-phases {
+      display: grid;
+      grid-template-columns: repeat(9, auto);
+      align-items: center;
+      gap: 0;
+      justify-content: center;
+    }
+    .request-phase-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 56px;
+    }
+    .request-phase-circle {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: var(--border-color);
+    }
+    .request-phase-step.done .request-phase-circle {
+      background: #34C759; border-color: #34C759; color: #fff;
+    }
+    .request-phase-step.done .request-phase-circle::after { content: '✓'; }
+    .request-phase-step.active .request-phase-circle {
+      background: #007AFF; border-color: #007AFF; color: #fff;
+    }
+    .request-phase-step.active .request-phase-circle::after { content: ''; width:6px; height:6px; background:#fff; border-radius:50%; }
+    .request-phase-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+    .request-phase-step.done .request-phase-label,
+    .request-phase-step.active .request-phase-label {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    .request-phase-connector {
+      width: 32px; height: 2px;
+      background: var(--border-color);
+      margin-top: -16px;
+    }
+    .request-phase-connector.done { background: #34C759; }
+
+    /* 右: ボールホルダー + 履歴 */
+    .request-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    .request-ball {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #fff;
+      border: 1px solid var(--border-color);
+    }
+    .request-ball-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .request-ball.boss { background: #FFF8E1; border-color: #FFCC02; color: #8B5A00; }
+    .request-ball.boss .request-ball-dot { background: #FF9500; }
+    .request-ball.self { background: #E3F2FF; border-color: #007AFF; color: #004C8F; }
+    .request-ball.self .request-ball-dot { background: #007AFF; }
+    .request-ball.external { background: #F2F2F7; border-color: #8E8E93; color: #1d1d1f; }
+    .request-ball.external .request-ball-dot { background: #8E8E93; }
+    .request-updated { font-size: 11px; color: var(--text-secondary); }
+    .request-updated strong { color: var(--text-primary); font-weight: 600; }
+    .request-history-btn {
+      font-size: 11px;
+      padding: 4px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .request-history-btn:hover { background: #F5F5F7; }
+
+    @media (max-width: 1023px) {
+      .request-card { grid-template-columns: 1fr; }
+      .request-right { align-items: flex-start; }
+      .request-phases { justify-content: flex-start; overflow-x: auto; }
+    }
+
     /* 週カード（PC専用） */
     .week-panel {
       display: block;
@@ -2853,6 +3047,26 @@
         </div>
         <div id="fcCalendarInline"></div>
       </aside>
+
+      <!-- すべての依頼（依頼確認カード） -->
+      <section class="requests-panel" id="requestsPanel" aria-label="すべての依頼">
+        <div class="requests-panel-header">
+          <div class="requests-panel-title-wrap">
+            <h3 class="requests-panel-title">📥 すべての依頼</h3>
+            <p class="requests-panel-subtitle">パイプライン / ボール持ち / 直近の一言で 1行から状況が分かる</p>
+          </div>
+          <div class="requests-panel-actions">
+            <select class="requests-filter" id="requestsFilter" aria-label="ステータス絞り込み">
+              <option value="">▽ ステータス</option>
+              <option value="self">塩崎ボール</option>
+              <option value="boss">上司ボール</option>
+              <option value="external">社外ボール</option>
+            </select>
+            <button type="button" class="requests-sort-btn" id="requestsSortBtn">期限順に並べ替え</button>
+          </div>
+        </div>
+        <div class="requests-list" id="requestsList"></div>
+      </section>
 
       <!-- PC版: 週のタスクメモカード（スクショAI報告書化用） -->
       <section class="week-panel" id="weekPanel" aria-label="週のタスクメモ">
@@ -3546,6 +3760,8 @@
         if (typeof reloadAndRenderLocations === 'function') reloadAndRenderLocations();
         // PC版: 今日のタスクパネル
         if (typeof renderTodayPanel === 'function') renderTodayPanel();
+        // 依頼確認カード
+        if (typeof renderRequestsPanel === 'function') renderRequestsPanel();
       } catch (error) {
         console.error('renderMainHighlights error:', error);
         elements.mainHighlights.innerHTML = `
@@ -7137,6 +7353,101 @@
       keysToRemove.forEach(key => localStorage.removeItem(key));
       showToast('確認設定をリセットしました');
     }
+
+    // ===================================================
+    // 依頼確認カード（モックデータ + 依頼者プルダウン）
+    // ===================================================
+    const MOCK_USERS = ['塩崎', '田中', '山田', '鈴木', '部長', '社外A社', '社外B社'];
+    const REQUEST_PHASES = ['依頼', '着手', '進行中', '完了報告', '確認済'];
+    let mockRequests = [
+      { id:'r1', title:'A社 見積回答', requester:'部長', requestDate:'5/22', deadline:'5/28', progress:60, phase:3, memo:'社内承認分の数字を反映して再提出。部長確認お願いします。', ball:'boss', ballLabel:'上司ボール (確認待ち)', updated:'今朝 09:15', dot:'red', staleDays:0 },
+      { id:'r2', title:'5月度 月次レポート', requester:'部長', requestDate:'5/20', deadline:'5/29', progress:30, phase:2, memo:'KPI集計まで完了。コメント記述中。明日朝に初稿提出予定。', ball:'self', ballLabel:'塩崎ボール', updated:'昨日 17:30', dot:'red', staleDays:0 },
+      { id:'r3', title:'提案資料 v2 作成', requester:'山田', requestDate:'5/19', deadline:'5/30', progress:50, phase:2, memo:'B社からの追加情報待ち。回答次第 v2 を完成。', ball:'external', ballLabel:'社外ボール', updated:'5/25 10:00', dot:'orange', staleDays:2 },
+      { id:'r4', title:'勤怠締め処理', requester:'塩崎', requestDate:'5/15', deadline:'5/31', progress:75, phase:2, memo:'残り 4名分のチェック。本日中に完了見込み。', ball:'self', ballLabel:'塩崎ボール', updated:'今朝 08:50', dot:'green', staleDays:0 },
+      { id:'r5', title:'備品発注 (6月分)', requester:'田中', requestDate:'5/18', deadline:'6/02', progress:90, phase:3, memo:'発注リスト完成。承認後に発注します。', ball:'boss', ballLabel:'上司ボール (確認待ち)', updated:'昨日 16:20', dot:'green', staleDays:0 },
+      { id:'r6', title:'リリース準備 v1.4.0', requester:'鈴木', requestDate:'5/12', deadline:'6/05', progress:40, phase:2, memo:'回帰テスト消化中。残り3項目。', ball:'self', ballLabel:'塩崎ボール', updated:'5/22 15:00', dot:'green', staleDays:5 },
+    ];
+
+    function renderRequestsPanel() {
+      const list = document.getElementById('requestsList');
+      if (!list) return;
+      const filter = (document.getElementById('requestsFilter') || {}).value || '';
+      const filtered = filter ? mockRequests.filter(r => r.ball === filter) : mockRequests;
+      list.innerHTML = filtered.map(renderRequestCard).join('');
+      // 依頼者プルダウン変更ハンドラ
+      list.querySelectorAll('.request-requester-select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          const id = e.target.dataset.id;
+          const target = mockRequests.find(r => r.id === id);
+          if (target) target.requester = e.target.value;
+        });
+      });
+    }
+
+    function renderRequestCard(r) {
+      const userOptions = MOCK_USERS.map(u =>
+        `<option value="${u}"${u === r.requester ? ' selected' : ''}>${u}</option>`
+      ).join('');
+      const phases = REQUEST_PHASES.map((label, idx) => {
+        const state = idx < r.phase ? 'done' : (idx === r.phase ? 'active' : '');
+        const connector = idx < REQUEST_PHASES.length - 1
+          ? `<div class="request-phase-connector ${idx < r.phase ? 'done' : ''}"></div>`
+          : '';
+        return `<div class="request-phase-step ${state}">
+          <div class="request-phase-circle"></div>
+          <div class="request-phase-label">${label}</div>
+        </div>${connector}`;
+      }).join('');
+      const stale = r.staleDays > 0
+        ? `<span class="request-stale-badge">⚠ ${r.staleDays} 日更新なし</span>`
+        : '';
+      return `
+        <div class="request-card" data-id="${r.id}">
+          <div class="request-card-left">
+            <div class="request-title-row">
+              <span class="request-status-dot ${r.dot}"></span>
+              <span class="request-title">${escapeHtml(r.title)}</span>
+              ${stale}
+            </div>
+            <div class="request-meta">
+              <span class="request-meta-item">依頼 <strong>${r.requestDate}</strong></span>
+              <span class="request-meta-item">期限 <strong>${r.deadline}</strong></span>
+              <span class="request-meta-item">進捗 <strong>${r.progress}%</strong></span>
+            </div>
+            <div class="request-memo">${escapeHtml(r.memo)}</div>
+            <div class="request-requester">
+              依頼者:
+              <select class="request-requester-select" data-id="${r.id}">${userOptions}</select>
+            </div>
+          </div>
+          <div class="request-phases">${phases}</div>
+          <div class="request-right">
+            <span class="request-ball ${r.ball}">
+              <span class="request-ball-dot"></span>${escapeHtml(r.ballLabel)}
+            </span>
+            <span class="request-updated">最終更新: <strong>${escapeHtml(r.updated)}</strong></span>
+            <button type="button" class="request-history-btn" data-id="${r.id}">履歴を見る ↗</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // フィルタ/並び替えハンドラ
+    document.addEventListener('DOMContentLoaded', () => {
+      const filterEl = document.getElementById('requestsFilter');
+      const sortBtn = document.getElementById('requestsSortBtn');
+      if (filterEl) filterEl.addEventListener('change', renderRequestsPanel);
+      if (sortBtn) sortBtn.addEventListener('click', () => {
+        mockRequests.sort((a, b) => {
+          const da = new Date('2026/' + a.deadline);
+          const db = new Date('2026/' + b.deadline);
+          return da - db;
+        });
+        renderRequestsPanel();
+      });
+      // 初回描画（renderMainHighlights が呼ばれない閲覧パスのケア）
+      renderRequestsPanel();
+    });
   </script>
 </body>
 </html>
