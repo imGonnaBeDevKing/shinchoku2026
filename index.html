@@ -2342,11 +2342,18 @@
     .request-card {
       display: grid;
       grid-template-columns: minmax(260px, 1.2fr) minmax(360px, 1.4fr) 180px;
-      gap: 20px;
+      grid-template-areas:
+        "left center right"
+        "memo memo memo";
+      gap: 12px 20px;
       padding: 16px 20px;
       border-bottom: 1px solid var(--border-color);
       align-items: center;
     }
+    .request-card-left   { grid-area: left; }
+    .request-phases      { grid-area: center; }
+    .request-right       { grid-area: right; }
+    .request-memo-wrap   { grid-area: memo; }
     .request-card:last-child { border-bottom: 0; }
 
     /* 左カラム: タイトル/メタ/メモ */
@@ -2524,7 +2531,14 @@
     .request-history-btn:hover { background: #F5F5F7; }
 
     @media (max-width: 1023px) {
-      .request-card { grid-template-columns: 1fr; }
+      .request-card {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "left"
+          "center"
+          "memo"
+          "right";
+      }
       .request-right { align-items: flex-start; }
       .request-phases { justify-content: flex-start; overflow-x: auto; }
     }
@@ -7587,7 +7601,6 @@
               <span class="request-meta-item">期限 <strong>${r.deadline}</strong></span>
               <span class="request-meta-item">進捗 <strong>${r.progress}%</strong></span>
             </div>
-            <div class="request-memo${r.memoIsPlaceholder ? ' is-placeholder' : ''}" contenteditable="true" data-id="${r.id}" spellcheck="false">${escapeHtml(r.memo)}</div>
             <div class="request-requester">
               依頼者:
               <select class="request-requester-select" data-id="${r.id}">${userOptions}</select>
@@ -7600,6 +7613,9 @@
             </span>
             <span class="request-updated">最終更新: <strong>${escapeHtml(r.updated)}</strong></span>
             <button type="button" class="request-history-btn" data-id="${r.id}">履歴を見る ↗</button>
+          </div>
+          <div class="request-memo-wrap">
+            <div class="request-memo${r.memoIsPlaceholder ? ' is-placeholder' : ''}" contenteditable="true" data-id="${r.id}" spellcheck="false">${escapeHtml(r.memo)}</div>
           </div>
         </div>
       `;
