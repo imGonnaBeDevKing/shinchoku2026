@@ -2084,8 +2084,62 @@
     .schedule-handle:hover { color: var(--text-primary); }
     .schedule-handle:active { cursor: grabbing; }
     #fcCalendarInline {
-      padding: var(--space-md) var(--space-lg) var(--space-lg);
-      min-height: 620px;
+      padding: var(--space-sm) var(--space-md) var(--space-md);
+      min-height: 380px;
+    }
+    /* 件数通知ストリップ（カレンダーヘッダー上） */
+    .status-count-strip {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px 0;
+      flex-wrap: wrap;
+    }
+    .status-count-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--bg-secondary, #fff);
+      border: 1px solid var(--border-color, #e5e5e7);
+      font-size: 12px;
+      color: var(--text-primary, #1d1d1f);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .status-count-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-count-chip--zetsu .status-count-dot { background: #FF3B30; }
+    .status-count-chip--ran   .status-count-dot { background: #FF9500; }
+    .status-count-chip--jun   .status-count-dot { background: #34C759; }
+    .status-count-label { font-weight: 500; }
+    .status-count-num   { font-size: 15px; font-weight: 700; margin: 0 1px; }
+    .status-count-unit  { font-size: 11px; color: var(--text-secondary, #6e6e73); }
+
+    /* コンパクトカレンダー: フォント/セル高/ツールバーを縮小 */
+    .calendar-panel-compact #fcCalendarInline .fc-toolbar.fc-header-toolbar {
+      margin-bottom: 0.4em;
+    }
+    .calendar-panel-compact #fcCalendarInline .fc-toolbar-title {
+      font-size: 14px !important;
+    }
+    .calendar-panel-compact #fcCalendarInline .fc-button {
+      padding: 2px 8px !important;
+      font-size: 12px !important;
+    }
+    .calendar-panel-compact #fcCalendarInline .fc-col-header-cell-cushion,
+    .calendar-panel-compact #fcCalendarInline .fc-daygrid-day-number {
+      font-size: 11px;
+      padding: 2px 4px;
+    }
+    .calendar-panel-compact #fcCalendarInline .fc-daygrid-day-frame {
+      min-height: 36px;
+    }
+    .calendar-panel-compact #fcCalendarInline .fc-event {
+      font-size: 10px;
     }
     /* PC版では「暦」ボタンは冗長なので非表示 */
     #btnOpenCalendar {
@@ -2739,8 +2793,28 @@
         </div>
       </aside>
 
-      <!-- PC版: カレンダー -->
-      <aside class="calendar-panel" id="calendarPanel">
+      <!-- PC版: カレンダー（件数通知カード + コンパクトカレンダー） -->
+      <aside class="calendar-panel calendar-panel-compact" id="calendarPanel">
+        <div class="status-count-strip" id="statusCountStrip" aria-label="ステータス別件数">
+          <span class="status-count-chip status-count-chip--zetsu">
+            <span class="status-count-dot" aria-hidden="true"></span>
+            <span class="status-count-label">緊急</span>
+            <strong class="status-count-num" id="statusCountZetsu">0</strong>
+            <span class="status-count-unit">件</span>
+          </span>
+          <span class="status-count-chip status-count-chip--ran">
+            <span class="status-count-dot" aria-hidden="true"></span>
+            <span class="status-count-label">注意</span>
+            <strong class="status-count-num" id="statusCountRan">0</strong>
+            <span class="status-count-unit">件</span>
+          </span>
+          <span class="status-count-chip status-count-chip--jun">
+            <span class="status-count-dot" aria-hidden="true"></span>
+            <span class="status-count-label">順調</span>
+            <strong class="status-count-num" id="statusCountJun">0</strong>
+            <span class="status-count-unit">件</span>
+          </span>
+        </div>
         <div class="calendar-panel-header">
           <h3 class="calendar-panel-title">カレンダー</h3>
           <div class="location-legend" id="locationLegend"></div>
@@ -3392,6 +3466,14 @@
         ranTasks.sort(compareTasks);
         junTasks.sort(compareTasks); // add: 循期限
         tasksWithoutDeadline.sort(compareTasks); // 期限なしも並び替え
+
+        // 件数通知ストリップ更新
+        const elZetsu = document.getElementById('statusCountZetsu');
+        const elRan   = document.getElementById('statusCountRan');
+        const elJun   = document.getElementById('statusCountJun');
+        if (elZetsu) elZetsu.textContent = String(zetsuTasks.length);
+        if (elRan)   elRan.textContent   = String(ranTasks.length);
+        if (elJun)   elJun.textContent   = String(junTasks.length);
 
         let html = '';
 
