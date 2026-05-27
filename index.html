@@ -7455,8 +7455,14 @@
     }
     function buildRequestsFromTasks() {
       const src = Array.isArray(tasks) ? tasks : [];
+      // 完了済みタスク（task.completed=true もしくは phase=4 確認済）は除外
+      const active = src.filter(t => {
+        if (typeof toBool === 'function' && toBool(t.completed)) return false;
+        if (Number.isInteger(t.phase) && t.phase >= 4) return false;
+        return true;
+      });
       // mainHighlights と同じ並び替え（compareTasks）
-      const sorted = [...src].sort(compareTasks);
+      const sorted = [...active].sort(compareTasks);
       return sorted.map(t => {
         const phase = deriveRequestPhase(t);
         const ball = deriveRequestBall(t);
