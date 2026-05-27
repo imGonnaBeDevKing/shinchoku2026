@@ -7445,7 +7445,8 @@
         const wd = DAY_JA[now.getDay()];
         const h  = String(now.getHours()).padStart(2, '0');
         const mi = String(now.getMinutes()).padStart(2, '0');
-        el.textContent = `── ${y} / ${mo} / ${d} (${wd}) · ${h}:${mi} JST`;
+        const s = String(now.getSeconds()).padStart(2, '0');
+        el.textContent = `── ${y} / ${mo} / ${d} (${wd}) · ${h}:${mi}:${s} JST`;
       }
       tick();
       setInterval(tick, 1000);
