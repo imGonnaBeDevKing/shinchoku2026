@@ -2341,19 +2341,23 @@
     .requests-list { display: flex; flex-direction: column; }
     .request-card {
       display: grid;
-      grid-template-columns: minmax(260px, 1.2fr) minmax(360px, 1.4fr) 180px;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       grid-template-areas:
-        "left center right"
-        "memo memo memo";
-      gap: 12px 20px;
-      padding: 16px 20px;
+        "header header header"
+        "phases memo   right";
+      gap: 10px 16px;
+      padding: 12px 20px;
       border-bottom: 1px solid var(--border-color);
       align-items: center;
     }
-    .request-card-left   { grid-area: left; }
-    .request-phases      { grid-area: center; }
+    .request-header      { grid-area: header; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .request-phases      { grid-area: phases; }
+    .request-memo-wrap   { grid-area: memo; max-width: 50%; justify-self: start; width: 100%; }
     .request-right       { grid-area: right; }
-    .request-memo-wrap   { grid-area: memo; }
+    .request-header-meta { display: inline-flex; gap: 12px; font-size: 11px; color: var(--text-secondary); }
+    .request-header-meta strong { color: var(--text-primary); font-weight: 600; }
+    .request-header-requester { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-secondary); }
+    .request-header-spacer { flex: 1 1 auto; }
     .request-card:last-child { border-bottom: 0; }
 
     /* 左カラム: タイトル/メタ/メモ */
@@ -2534,11 +2538,12 @@
       .request-card {
         grid-template-columns: 1fr;
         grid-template-areas:
-          "left"
-          "center"
+          "header"
+          "phases"
           "memo"
           "right";
       }
+      .request-memo-wrap { max-width: 100%; }
       .request-right { align-items: flex-start; }
       .request-phases { justify-content: flex-start; overflow-x: auto; }
     }
@@ -7590,32 +7595,31 @@
         : '';
       return `
         <div class="request-card" data-id="${r.id}">
-          <div class="request-card-left">
-            <div class="request-title-row">
-              <span class="request-status-dot ${r.dot}"></span>
-              <span class="request-title">${escapeHtml(r.title)}</span>
-              ${stale}
-            </div>
-            <div class="request-meta">
-              <span class="request-meta-item">依頼 <strong>${r.requestDate}</strong></span>
-              <span class="request-meta-item">期限 <strong>${r.deadline}</strong></span>
-              <span class="request-meta-item">進捗 <strong>${r.progress}%</strong></span>
-            </div>
-            <div class="request-requester">
+          <div class="request-header">
+            <span class="request-status-dot ${r.dot}"></span>
+            <span class="request-title">${escapeHtml(r.title)}</span>
+            ${stale}
+            <span class="request-header-meta">
+              <span>依頼 <strong>${r.requestDate}</strong></span>
+              <span>期限 <strong>${r.deadline}</strong></span>
+              <span>進捗 <strong>${r.progress}%</strong></span>
+            </span>
+            <span class="request-header-requester">
               依頼者:
               <select class="request-requester-select" data-id="${r.id}">${userOptions}</select>
-            </div>
-          </div>
-          <div class="request-phases">${phases}</div>
-          <div class="request-right">
+            </span>
+            <span class="request-header-spacer"></span>
             <span class="request-ball ${r.ball}">
               <span class="request-ball-dot"></span>${escapeHtml(r.ballLabel)}
             </span>
-            <span class="request-updated">最終更新: <strong>${escapeHtml(r.updated)}</strong></span>
-            <button type="button" class="request-history-btn" data-id="${r.id}">履歴を見る ↗</button>
           </div>
+          <div class="request-phases">${phases}</div>
           <div class="request-memo-wrap">
             <div class="request-memo${r.memoIsPlaceholder ? ' is-placeholder' : ''}" contenteditable="true" data-id="${r.id}" spellcheck="false">${escapeHtml(r.memo)}</div>
+          </div>
+          <div class="request-right">
+            <span class="request-updated">最終更新: <strong>${escapeHtml(r.updated)}</strong></span>
+            <button type="button" class="request-history-btn" data-id="${r.id}">履歴を見る ↗</button>
           </div>
         </div>
       `;
