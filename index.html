@@ -3020,8 +3020,8 @@
       left: 0;
       right: 0;
       z-index: 9998;
-      background: #1C1C1E;
-      color: #F5F5F7;
+      background: #FFF8E6;
+      color: #1C1C1E;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -3030,7 +3030,7 @@
       font-size: 12px;
       font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
       -webkit-font-smoothing: antialiased;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid #F0D98C;
     }
     .flag-bar-icon { font-size: 13px; flex-shrink: 0; }
     .flag-bar-text {
@@ -3039,24 +3039,24 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: #E5E5EA;
+      color: #1C1C1E;
       line-height: 36px;
       cursor: default;
     }
     .flag-bar-text:empty::before {
       content: attr(data-placeholder);
-      color: #636366;
+      color: #8A8A8E;
     }
     .flag-bar-text[contenteditable="true"] {
       cursor: text;
       border-bottom: 1px solid #007AFF;
       padding-bottom: 1px;
-      color: #fff;
+      color: #000;
     }
     .flag-bar-edit {
       background: transparent;
       border: 0;
-      color: #636366;
+      color: #8A6D1B;
       cursor: pointer;
       font-size: 13px;
       padding: 2px 4px;
@@ -3064,7 +3064,7 @@
       line-height: 1;
       transition: color 0.15s;
     }
-    .flag-bar-edit:hover { color: #aeaeb2; }
+    .flag-bar-edit:hover { color: #5C4A12; }
     /* バー分だけ main をずらす */
     .main-content { margin-top: calc(44px + 36px) !important; padding-top: 0 !important; }
     @media (max-width: 640px) {
