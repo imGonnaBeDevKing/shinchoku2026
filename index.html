@@ -2950,6 +2950,64 @@
       gap: 0 !important;
     }
 
+    /* フラグメッセージバー */
+    .flag-bar {
+      position: fixed;
+      top: 44px;
+      left: 0;
+      right: 0;
+      z-index: 9998;
+      background: #1C1C1E;
+      color: #F5F5F7;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px;
+      height: 36px;
+      font-size: 12px;
+      font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .flag-bar-icon { font-size: 13px; flex-shrink: 0; }
+    .flag-bar-text {
+      flex: 1;
+      outline: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #E5E5EA;
+      line-height: 36px;
+      cursor: default;
+    }
+    .flag-bar-text:empty::before {
+      content: attr(data-placeholder);
+      color: #636366;
+    }
+    .flag-bar-text[contenteditable="true"] {
+      cursor: text;
+      border-bottom: 1px solid #007AFF;
+      padding-bottom: 1px;
+      color: #fff;
+    }
+    .flag-bar-edit {
+      background: transparent;
+      border: 0;
+      color: #636366;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 4px;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .flag-bar-edit:hover { color: #aeaeb2; }
+    /* バー分だけ main をずらす */
+    .main-content { margin-top: calc(44px + 36px) !important; padding-top: 0 !important; }
+    @media (max-width: 640px) {
+      .flag-bar { font-size: 11px; padding: 0 12px; }
+    }
+
     /* ヘッダー時計 */
     .header-clock {
       flex: 1;
@@ -3048,6 +3106,13 @@
       </button>
     </div>
   </header>
+
+  <!-- フラグメッセージバー -->
+  <div class="flag-bar" id="flagBar">
+    <span class="flag-bar-icon" aria-hidden="true">🚩</span>
+    <div class="flag-bar-text" id="flagBarText" contenteditable="false" spellcheck="false" data-placeholder="今週のフォーカスを入力…（クリックして編集）"></div>
+    <button type="button" class="flag-bar-edit" id="flagBarEditBtn" title="編集">✏️</button>
+  </div>
 
   <!-- メインコンテンツ -->
   <main class="main-content">
@@ -7431,6 +7496,83 @@
     }
 
     // ===================================================
+    // フラグメッセージバー（Firestore: collection 'flag_messages', doc 'current'）
+    // ===================================================
+    (function initFlagBar() {
+      const textEl  = document.getElementById('flagBarText');
+      const editBtn = document.getElementById('flagBarEditBtn');
+      if (!textEl || !editBtn) return;
+
+      const FLAG_DOC_PATH = () => (db ? doc(db, 'flag_messages', 'current') : null);
+
+      // Firestore から読み込み
+      async function loadFlagMessage() {
+        const ref = FLAG_DOC_PATH();
+        if (!ref) return;
+        try {
+          const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+          const snap = await getDoc(ref);
+          if (snap.exists()) textEl.textContent = snap.data().message || '';
+        } catch (e) { console.warn('flagBar load error', e); }
+      }
+
+      // Firestore へ保存
+      async function saveFlagMessage(msg) {
+        const ref = FLAG_DOC_PATH();
+        if (!ref) return;
+        try {
+          await setDoc(ref, { message: msg, updatedAt: new Date().toISOString() });
+        } catch (e) { console.warn('flagBar save error', e); }
+      }
+
+      // 編集モードON
+      function startEdit() {
+        textEl.contentEditable = 'true';
+        textEl.style.overflow = 'visible';
+        textEl.style.whiteSpace = 'normal';
+        textEl.focus();
+        const range = document.createRange();
+        range.selectNodeContents(textEl);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        editBtn.textContent = '💾';
+        editBtn.title = '保存';
+      }
+
+      // 編集モードOFF＋保存
+      function endEdit() {
+        textEl.contentEditable = 'false';
+        textEl.style.overflow = 'hidden';
+        textEl.style.whiteSpace = 'nowrap';
+        editBtn.textContent = '✏️';
+        editBtn.title = '編集';
+        saveFlagMessage(textEl.textContent.trim());
+      }
+
+      editBtn.addEventListener('click', () => {
+        if (textEl.contentEditable === 'true') endEdit();
+        else startEdit();
+      });
+      textEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); endEdit(); }
+        if (e.key === 'Escape') { e.preventDefault(); endEdit(); }
+      });
+      textEl.addEventListener('click', () => {
+        if (textEl.contentEditable !== 'true') startEdit();
+      });
+
+      // DB接続後に読み込み（dbが確定してから）
+      const waitForDb = setInterval(() => {
+        if (typeof db !== 'undefined' && db) {
+          clearInterval(waitForDb);
+          loadFlagMessage();
+        }
+      }, 500);
+    })();
+
+    // ===================================================
     // ヘッダーリアルタイム時計
     // ===================================================
     (function initHeaderClock() {
@@ -7456,7 +7598,7 @@
     // 依頼確認カード（実タスク連動 + 依頼者プルダウン）
     // データ源は global tasks（緊急/注意/順調/期限なしと同一）
     // ===================================================
-    const REQUEST_USERS = ['部長', '社長様', '目黒さん', '島村さん', '奥田さん'];
+    const REQUEST_USERS = ['本人', '部長', '社長様', '目黒さん', '島村さん', '奥田さん', '企画部'];
     const REQUEST_PHASES = ['依頼', '着手', '進行中', '完了報告', '確認済'];
 
     function deriveRequestPhase(task) {
