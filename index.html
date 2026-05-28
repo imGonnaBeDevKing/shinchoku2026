@@ -1830,7 +1830,7 @@
   }
   .right-column { display: contents; }
   .today-panel { display: none; }
-  .advice-panel { display: none; }
+  .status-summary-panel { display: none; }
 
   /* スマホ版カレンダー（デフォルト表示） */
   .calendar-panel-mobile {
@@ -2192,19 +2192,64 @@
     .main-highlights { grid-column: 1; grid-row: 2; }
     .today-panel     { grid-column: 2; grid-row: 1; }
     .calendar-panel  { grid-column: 2; grid-row: 2; }
-    .advice-panel    { grid-column: 1; grid-row: 1; }
+    .status-summary-panel { grid-column: 1; grid-row: 1; }
     .week-panel      { grid-column: 1 / -1; grid-row: 3; }
     .requests-panel  { grid-column: 1 / -1; grid-row: 4; }
 
-    /* 今日のアドバイス掲示板（Claude Cowork 自動生成） */
-    .advice-panel {
+    /* ステータスサマリーカード（緊急/注意/順調/期限なし） */
+    .status-summary-panel {
       display: block;
       grid-column: 1;
-      background: linear-gradient(135deg, #FFF9E6 0%, #FFE4B5 100%);
+      background: var(--bg-secondary);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-light);
-      border: 3px solid #FFB84D;
-      overflow: hidden;
+      border: 1px solid var(--border-color);
+      padding: 16px;
+    }
+    .status-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      height: 100%;
+    }
+    .status-summary-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 16px 12px;
+      border-radius: 12px;
+      background: #fff;
+      border: 2px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      min-height: 90px;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .status-summary-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .status-summary-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .status-summary-card--zetsu       { border-color: #FF3B30; background: #FFF5F5; }
+    .status-summary-card--zetsu .status-summary-dot { background: #FF3B30; }
+    .status-summary-card--ran         { border-color: var(--color-ran, #FF9500); background: #FFF8EE; }
+    .status-summary-card--ran .status-summary-dot   { background: var(--color-ran, #FF9500); }
+    .status-summary-card--jun         { border-color: var(--color-jun, #34C759); background: #F2FBF4; }
+    .status-summary-card--jun .status-summary-dot   { background: var(--color-jun, #34C759); }
+    .status-summary-card--nodeadline  { border-color: #8E8E93; background: #F5F5F7; }
+    .status-summary-card--nodeadline .status-summary-dot { background: #8E8E93; }
+    .status-summary-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .status-summary-num   { font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+    .status-summary-unit  { font-size: 11px; color: var(--text-secondary); }
+
+    /* 旧 advice-panel スタイル（未使用・後方互換のため残存） */
+    .advice-panel {
+      display: none;
     }
     .advice-panel-header {
       padding: var(--space-md) var(--space-lg);
@@ -3149,15 +3194,33 @@
         <div id="fcCalendarMobile"></div>
       </div>
 
-      <!-- PC版: 今日のアドバイス掲示板（ルールベース・ボタン生成） -->
-      <aside class="advice-panel" id="advicePanel" aria-label="今日のアドバイス">
-        <div class="advice-panel-header">
-          <h3 class="advice-panel-title">今日のアドバイス</h3>
-          <span class="advice-panel-meta" id="advicePanelMeta">--</span>
-          <button type="button" class="advice-generate-btn" id="adviceGenerateBtn" title="今日のアドバイスを生成">🌟 生成</button>
-        </div>
-        <div class="advice-panel-body" id="advicePanelBody">
-          <div class="advice-empty">今朝のアドバイスはまだ生成されていません。右上「🌟 生成」を押してください</div>
+      <!-- PC版: ステータスサマリーカード（緊急/注意/順調/期限なし） -->
+      <aside class="status-summary-panel" id="statusSummaryPanel" aria-label="ステータスサマリー">
+        <div class="status-summary-grid">
+          <div class="status-summary-card status-summary-card--zetsu">
+            <span class="status-summary-dot" aria-hidden="true"></span>
+            <span class="status-summary-label">緊急</span>
+            <strong class="status-summary-num" id="statusSummaryZetsu">0</strong>
+            <span class="status-summary-unit">件</span>
+          </div>
+          <div class="status-summary-card status-summary-card--ran">
+            <span class="status-summary-dot" aria-hidden="true"></span>
+            <span class="status-summary-label">注意</span>
+            <strong class="status-summary-num" id="statusSummaryRan">0</strong>
+            <span class="status-summary-unit">件</span>
+          </div>
+          <div class="status-summary-card status-summary-card--jun">
+            <span class="status-summary-dot" aria-hidden="true"></span>
+            <span class="status-summary-label">順調</span>
+            <strong class="status-summary-num" id="statusSummaryJun">0</strong>
+            <span class="status-summary-unit">件</span>
+          </div>
+          <div class="status-summary-card status-summary-card--nodeadline">
+            <span class="status-summary-dot" aria-hidden="true"></span>
+            <span class="status-summary-label">期限なし</span>
+            <strong class="status-summary-num" id="statusSummaryNoDeadline">0</strong>
+            <span class="status-summary-unit">件</span>
+          </div>
         </div>
       </aside>
 
@@ -3176,28 +3239,8 @@
         </div>
       </aside>
 
-      <!-- PC版: カレンダー（件数通知カード + コンパクトカレンダー） -->
+      <!-- PC版: カレンダー -->
       <aside class="calendar-panel calendar-panel-compact" id="calendarPanel">
-        <div class="status-count-strip" id="statusCountStrip" aria-label="ステータス別件数">
-          <span class="status-count-chip status-count-chip--zetsu">
-            <span class="status-count-dot" aria-hidden="true"></span>
-            <span class="status-count-label">緊急</span>
-            <strong class="status-count-num" id="statusCountZetsu">0</strong>
-            <span class="status-count-unit">件</span>
-          </span>
-          <span class="status-count-chip status-count-chip--ran">
-            <span class="status-count-dot" aria-hidden="true"></span>
-            <span class="status-count-label">注意</span>
-            <strong class="status-count-num" id="statusCountRan">0</strong>
-            <span class="status-count-unit">件</span>
-          </span>
-          <span class="status-count-chip status-count-chip--jun">
-            <span class="status-count-dot" aria-hidden="true"></span>
-            <span class="status-count-label">順調</span>
-            <strong class="status-count-num" id="statusCountJun">0</strong>
-            <span class="status-count-unit">件</span>
-          </span>
-        </div>
         <div class="calendar-panel-header">
           <h3 class="calendar-panel-title">カレンダー</h3>
           <div class="location-legend" id="locationLegend"></div>
@@ -3870,13 +3913,22 @@
         junTasks.sort(compareTasks); // add: 循期限
         tasksWithoutDeadline.sort(compareTasks); // 期限なしも並び替え
 
-        // 件数通知ストリップ更新
+        // 件数通知ストリップ更新（旧）
         const elZetsu = document.getElementById('statusCountZetsu');
         const elRan   = document.getElementById('statusCountRan');
         const elJun   = document.getElementById('statusCountJun');
         if (elZetsu) elZetsu.textContent = String(zetsuTasks.length);
         if (elRan)   elRan.textContent   = String(ranTasks.length);
         if (elJun)   elJun.textContent   = String(junTasks.length);
+        // ステータスサマリーカード更新（新・緊急/注意/順調/期限なし）
+        const elSumZ = document.getElementById('statusSummaryZetsu');
+        const elSumR = document.getElementById('statusSummaryRan');
+        const elSumJ = document.getElementById('statusSummaryJun');
+        const elSumN = document.getElementById('statusSummaryNoDeadline');
+        if (elSumZ) elSumZ.textContent = String(zetsuTasks.length);
+        if (elSumR) elSumR.textContent = String(ranTasks.length);
+        if (elSumJ) elSumJ.textContent = String(junTasks.length);
+        if (elSumN) elSumN.textContent = String(tasksWithoutDeadline.length);
 
         let html = '';
 
