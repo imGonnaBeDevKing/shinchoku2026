@@ -2200,6 +2200,7 @@
     .status-summary-panel {
       display: block;
       grid-column: 1;
+      align-self: stretch;
       background: var(--bg-secondary);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-light);
@@ -2209,6 +2210,7 @@
     .status-summary-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: 1fr 1fr;
       gap: 12px;
       height: 100%;
     }
