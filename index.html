@@ -2309,6 +2309,22 @@
       font-style: italic;
     }
     /* ===== 依頼確認カード（すべての依頼） ===== */
+    .requests-others-toggle {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      margin: 8px 0;
+      background: var(--bg-primary, #f7f7f8);
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .requests-others-toggle:hover { background: #eef0f3; color: var(--text-primary); }
+    .requests-others-list { display: block; }
     .requests-panel {
       display: block;
       background: var(--bg-secondary);
@@ -7698,7 +7714,25 @@
         list.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-secondary);font-size:13px;">該当する依頼はありません</div>`;
         return;
       }
-      list.innerHTML = filtered.map(renderRequestCard).join('');
+      // 緊急(red)/注意(orange)は常時表示、その他(green等)は折りたたみ
+      const priority = filtered.filter(r => r.dot === 'red' || r.dot === 'orange');
+      const others = filtered.filter(r => r.dot !== 'red' && r.dot !== 'orange');
+      const expanded = list.dataset.othersExpanded === '1';
+      let html = priority.map(renderRequestCard).join('');
+      if (others.length > 0) {
+        html += `<button type="button" class="requests-others-toggle" id="requestsOthersToggle" aria-expanded="${expanded}">${expanded ? '▲ その他を隠す' : `▼ その他 ${others.length} 件を表示`}</button>`;
+        if (expanded) {
+          html += `<div class="requests-others-list">${others.map(renderRequestCard).join('')}</div>`;
+        }
+      }
+      list.innerHTML = html;
+      const toggleBtn = document.getElementById('requestsOthersToggle');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          list.dataset.othersExpanded = expanded ? '0' : '1';
+          renderRequestsPanel();
+        });
+      }
       // 依頼者プルダウン変更ハンドラ（Firestore tasks に永続化）
       list.querySelectorAll('.request-requester-select').forEach(sel => {
         sel.addEventListener('change', async (e) => {
