@@ -1829,6 +1829,7 @@
     display: none;
   }
   .right-column { display: contents; }
+  .dash-col { display: contents; }
   .today-panel { display: none; }
   .status-summary-panel { display: none; }
 
@@ -2188,44 +2189,44 @@
     #btnOpenCalendar {
       display: none !important;
     }
-    /* PC: 2x2グリッド明示配置（advice|today / highlights|calendar / week全幅） */
-    .main-highlights { grid-column: 1; grid-row: 2; }
-    .today-panel     { grid-column: 2; grid-row: 1; }
-    .calendar-panel  { grid-column: 2; grid-row: 2; }
-    .status-summary-panel { grid-column: 1; grid-row: 1; }
+    /* PC: 2カラム独立配置（左:サマリー+ハイライト / 右:今日+カレンダー / 下:依頼・週 全幅） */
+    .dash-col {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+      min-width: 0;
+    }
+    .dash-col--left  { grid-column: 1; grid-row: 1; }
+    .dash-col--right { grid-column: 2; grid-row: 1; }
+    .requests-panel  { grid-column: 1 / -1; grid-row: 2; }
     .week-panel      { grid-column: 1 / -1; grid-row: 3; }
-    .requests-panel  { grid-column: 1 / -1; grid-row: 4; }
+    .main-highlights { margin-bottom: 0; }
 
     /* ステータスサマリーカード（緊急/注意/順調/期限なし） */
     .status-summary-panel {
       display: block;
-      grid-column: 1;
-      align-self: stretch;
       background: var(--bg-secondary);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-light);
       border: 1px solid var(--border-color);
-      padding: 16px;
+      padding: 12px;
     }
     .status-summary-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      grid-template-rows: 1fr 1fr;
-      gap: 12px;
-      height: 100%;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
     }
     .status-summary-card {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      padding: 16px 12px;
-      border-radius: 12px;
+      gap: 2px;
+      padding: 10px 8px;
+      border-radius: 10px;
       background: #fff;
       border: 2px solid var(--border-color);
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      min-height: 90px;
       transition: transform 0.15s, box-shadow 0.15s;
     }
     .status-summary-card:hover {
@@ -2245,9 +2246,9 @@
     .status-summary-card--jun .status-summary-dot   { background: var(--color-jun, #34C759); }
     .status-summary-card--nodeadline  { border-color: #8E8E93; background: #F5F5F7; }
     .status-summary-card--nodeadline .status-summary-dot { background: #8E8E93; }
-    .status-summary-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-    .status-summary-num   { font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1; }
-    .status-summary-unit  { font-size: 11px; color: var(--text-secondary); }
+    .status-summary-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .status-summary-num   { font-size: 22px; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
+    .status-summary-unit  { font-size: 10px; color: var(--text-secondary); }
 
     /* 旧 advice-panel スタイル（未使用・後方互換のため残存） */
     .advice-panel {
@@ -3180,13 +3181,46 @@
   <!-- メインコンテンツ -->
   <main class="main-content">
     <div class="main-grid">
-      <!-- 絶期限・乱期限ハイライト表示 -->
-      <section id="mainHighlights" class="main-highlights">
-        <div class="loading" role="status" aria-live="polite" aria-busy="true">
-          <div class="loading-spinner" aria-hidden="true"></div>
-          <p>読み込み中...</p>
-        </div>
-      </section>
+      <!-- PC版: 左カラム（ステータスサマリー + 期限ハイライト） -->
+      <div class="dash-col dash-col--left">
+        <!-- PC版: ステータスサマリーカード（緊急/注意/順調/期限なし） -->
+        <aside class="status-summary-panel" id="statusSummaryPanel" aria-label="ステータスサマリー">
+          <div class="status-summary-grid">
+            <div class="status-summary-card status-summary-card--zetsu">
+              <span class="status-summary-dot" aria-hidden="true"></span>
+              <span class="status-summary-label">緊急</span>
+              <strong class="status-summary-num" id="statusSummaryZetsu">0</strong>
+              <span class="status-summary-unit">件</span>
+            </div>
+            <div class="status-summary-card status-summary-card--ran">
+              <span class="status-summary-dot" aria-hidden="true"></span>
+              <span class="status-summary-label">注意</span>
+              <strong class="status-summary-num" id="statusSummaryRan">0</strong>
+              <span class="status-summary-unit">件</span>
+            </div>
+            <div class="status-summary-card status-summary-card--jun">
+              <span class="status-summary-dot" aria-hidden="true"></span>
+              <span class="status-summary-label">順調</span>
+              <strong class="status-summary-num" id="statusSummaryJun">0</strong>
+              <span class="status-summary-unit">件</span>
+            </div>
+            <div class="status-summary-card status-summary-card--nodeadline">
+              <span class="status-summary-dot" aria-hidden="true"></span>
+              <span class="status-summary-label">期限なし</span>
+              <strong class="status-summary-num" id="statusSummaryNoDeadline">0</strong>
+              <span class="status-summary-unit">件</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 絶期限・乱期限ハイライト表示 -->
+        <section id="mainHighlights" class="main-highlights">
+          <div class="loading" role="status" aria-live="polite" aria-busy="true">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <p>読み込み中...</p>
+          </div>
+        </section>
+      </div>
 
       <!-- スマホ版: カレンダー（期限なしカードの下に表示） -->
       <div class="calendar-panel-mobile" id="calendarPanelMobile">
@@ -3196,59 +3230,32 @@
         <div id="fcCalendarMobile"></div>
       </div>
 
-      <!-- PC版: ステータスサマリーカード（緊急/注意/順調/期限なし） -->
-      <aside class="status-summary-panel" id="statusSummaryPanel" aria-label="ステータスサマリー">
-        <div class="status-summary-grid">
-          <div class="status-summary-card status-summary-card--zetsu">
-            <span class="status-summary-dot" aria-hidden="true"></span>
-            <span class="status-summary-label">緊急</span>
-            <strong class="status-summary-num" id="statusSummaryZetsu">0</strong>
-            <span class="status-summary-unit">件</span>
+      <!-- PC版: 右カラム（今日のタスク + カレンダー） -->
+      <div class="dash-col dash-col--right">
+        <!-- PC版: 今日のタスク -->
+        <aside class="today-panel" id="todayPanel">
+          <div class="today-panel-header">
+            <h3 class="today-panel-title">今日のタスク</h3>
+            <span class="today-location-chip is-empty" id="todayLocationChip">場所未設定</span>
+            <span class="today-panel-date" id="todayPanelDate"></span>
           </div>
-          <div class="status-summary-card status-summary-card--ran">
-            <span class="status-summary-dot" aria-hidden="true"></span>
-            <span class="status-summary-label">注意</span>
-            <strong class="status-summary-num" id="statusSummaryRan">0</strong>
-            <span class="status-summary-unit">件</span>
+          <div class="today-timeline-wrap">
+            <div class="today-timeline-hours" id="todayTimelineHours"></div>
+            <div class="today-timeline-grid" id="todayTimelineGrid" data-drop="today">
+              <div class="today-timeline-empty" id="todayTimelineEmpty">タスクカード右端の 🕘 をドラッグして9〜18時のラインに置いてください</div>
+            </div>
           </div>
-          <div class="status-summary-card status-summary-card--jun">
-            <span class="status-summary-dot" aria-hidden="true"></span>
-            <span class="status-summary-label">順調</span>
-            <strong class="status-summary-num" id="statusSummaryJun">0</strong>
-            <span class="status-summary-unit">件</span>
-          </div>
-          <div class="status-summary-card status-summary-card--nodeadline">
-            <span class="status-summary-dot" aria-hidden="true"></span>
-            <span class="status-summary-label">期限なし</span>
-            <strong class="status-summary-num" id="statusSummaryNoDeadline">0</strong>
-            <span class="status-summary-unit">件</span>
-          </div>
-        </div>
-      </aside>
+        </aside>
 
-      <!-- PC版: 今日のタスク -->
-      <aside class="today-panel" id="todayPanel">
-        <div class="today-panel-header">
-          <h3 class="today-panel-title">今日のタスク</h3>
-          <span class="today-location-chip is-empty" id="todayLocationChip">場所未設定</span>
-          <span class="today-panel-date" id="todayPanelDate"></span>
-        </div>
-        <div class="today-timeline-wrap">
-          <div class="today-timeline-hours" id="todayTimelineHours"></div>
-          <div class="today-timeline-grid" id="todayTimelineGrid" data-drop="today">
-            <div class="today-timeline-empty" id="todayTimelineEmpty">タスクカード右端の 🕘 をドラッグして9〜18時のラインに置いてください</div>
+        <!-- PC版: カレンダー -->
+        <aside class="calendar-panel calendar-panel-compact" id="calendarPanel">
+          <div class="calendar-panel-header">
+            <h3 class="calendar-panel-title">カレンダー</h3>
+            <div class="location-legend" id="locationLegend"></div>
           </div>
-        </div>
-      </aside>
-
-      <!-- PC版: カレンダー -->
-      <aside class="calendar-panel calendar-panel-compact" id="calendarPanel">
-        <div class="calendar-panel-header">
-          <h3 class="calendar-panel-title">カレンダー</h3>
-          <div class="location-legend" id="locationLegend"></div>
-        </div>
-        <div id="fcCalendarInline"></div>
-      </aside>
+          <div id="fcCalendarInline"></div>
+        </aside>
+      </div>
 
       <!-- すべての依頼（依頼確認カード） -->
       <section class="requests-panel" id="requestsPanel" aria-label="すべての依頼">
