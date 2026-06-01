@@ -431,6 +431,11 @@
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
     }
+    /* 緊急(zetsu)だけは全画面幅で高さ制限なし・全件表示 */
+    .main-highlights .deadline-section.zetsu .task-list {
+      max-height: none;
+      overflow-y: visible;
+    }
 
     .task-list-empty {
       text-align: center;
