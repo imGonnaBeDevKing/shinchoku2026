@@ -4059,13 +4059,13 @@
 
     function computeIsoAchievement(){
       const list=Array.isArray(tasks)?tasks:[];
-      // 確認済(phase4)/完了は確認後に削除される運用のため母数から除外
+      // 完了(phase5)は確認後に削除される運用のため母数から除外
       const active=list.filter(t=>{
         if(typeof toBool==='function'?toBool(t.completed):t.completed===true) return false;
-        return deriveRequestPhase(t)<4;
+        return deriveRequestPhase(t)<5;
       });
       const total=active.length;
-      // 完了報告/確認待ち(phase3以降)に到達したタスク数を達成とみなす
+      // 叩き台提出(phase3以降=修正中含む)に到達したタスク数を達成とみなす
       const done=active.filter(t=>deriveRequestPhase(t)>=3).length;
       return { percent: total?Math.round(done/total*100):0, done, total };
     }
@@ -4107,7 +4107,7 @@
       if(titleEl) titleEl.textContent=s.title?s.title:'ISO取得 達成度';
       if(pctEl) pctEl.textContent=total?(percent+'%'):'--';
       if(fillEl) fillEl.style.width=(total?percent:0)+'%';
-      if(countEl) countEl.textContent='完了報告 '+done+' / 全 '+total+' 件';
+      if(countEl) countEl.textContent='叩き台提出 '+done+' / 全 '+total+' 件';
 
       const goal=isoParseDate(s.goalDate);
       const startBase=isoParseDate(s.startDate)||isoEarliestStart();
@@ -7854,16 +7854,17 @@
     // データ源は global tasks（緊急/注意/順調/期限なしと同一）
     // ===================================================
     const REQUEST_USERS = ['本人', '部長', '社長様', '目黒さん', '島村さん', '奥田さん', '船木さん', '企画部'];
-    const REQUEST_PHASES = ['依頼', '着手', '進行中', '完了報告', '確認済'];
+    const REQUEST_PHASES = ['依頼', '着手', '進行中', '叩き台提出', '修正中', '完了'];
 
     function deriveRequestPhase(task) {
       // 明示的に保存された phase があれば優先
-      if (task && typeof task === 'object' && Number.isInteger(task.phase) && task.phase >= 0 && task.phase <= 4) {
+      if (task && typeof task === 'object' && Number.isInteger(task.phase) && task.phase >= 0 && task.phase <= 5) {
         return task.phase;
       }
       const p = Number((task && typeof task === 'object') ? task.progress : task) || 0;
-      if (p >= 100) return 4;
-      if (p >= 80) return 3;
+      if (p >= 100) return 5;
+      if (p >= 80) return 4;
+      if (p >= 60) return 3;
       if (p >= 30) return 2;
       if (p >= 1) return 1;
       return 0;
@@ -7904,17 +7905,18 @@
       if (task.ball === 'boss' || task.ball === 'self' || task.ball === 'external') {
         return { key: task.ball };
       }
-      const phase = deriveRequestPhase(task.progress);
-      if (phase === 3) return { key: 'boss', label: '上司ボール (確認待ち)' };
-      if (phase === 4) return { key: 'self', label: '確認済' };
+      const phase = deriveRequestPhase(task);
+      if (phase === 3) return { key: 'boss', label: '上司ボール (レビュー待ち)' };
+      if (phase === 4) return { key: 'self', label: '塩崎ボール (修正中)' };
+      if (phase === 5) return { key: 'self', label: '完了' };
       return { key: 'self', label: '塩崎ボール' };
     }
     function buildRequestsFromTasks() {
       const src = Array.isArray(tasks) ? tasks : [];
-      // 完了済みタスク（task.completed=true もしくは phase=4 確認済）は除外
+      // 完了済みタスク（task.completed=true もしくは phase=5 完了）は除外
       const active = src.filter(t => {
         if (typeof toBool === 'function' && toBool(t.completed)) return false;
-        if (Number.isInteger(t.phase) && t.phase >= 4) return false;
+        if (Number.isInteger(t.phase) && t.phase >= 5) return false;
         return true;
       });
       // mainHighlights と同じ並び替え（compareTasks）
@@ -7935,7 +7937,7 @@
           memo: t.memo || '',
           memoIsPlaceholder: !t.memo,
           ball: ball.key,
-          ballLabel: ball.label || (ball.key === 'boss' ? '上司ボール (確認待ち)' : ball.key === 'external' ? '社外ボール' : '塩崎ボール'),
+          ballLabel: ball.label || (ball.key === 'boss' ? '上司ボール (レビュー待ち)' : ball.key === 'external' ? '社外ボール' : '塩崎ボール'),
           updated: fmtRequestUpdated(t.updatedAt),
           dot: requestDotFromStatus(status),
           staleDays: stale >= 2 ? stale : 0,
