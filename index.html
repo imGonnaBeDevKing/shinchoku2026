@@ -2501,7 +2501,8 @@
     /* 中央: フェーズステップ */
     .request-phases {
       display: grid;
-      grid-template-columns: repeat(9, auto);
+      grid-auto-flow: column;
+      grid-auto-columns: auto;
       align-items: center;
       gap: 0;
       justify-content: center;
