@@ -4059,16 +4059,15 @@
 
     function computeIsoAchievement(){
       const list=Array.isArray(tasks)?tasks:[];
-      const total=list.length; let sum=0, done=0;
-      list.forEach(t=>{
-        const completed=t.completed===true;
-        let p=completed?100:Number(t.progress);
-        if(!Number.isFinite(p)) p=0;
-        p=Math.max(0,Math.min(100,p));
-        sum+=p;
-        if(completed||p>=100) done+=1;
+      // 確認済(phase4)/完了は確認後に削除される運用のため母数から除外
+      const active=list.filter(t=>{
+        if(typeof toBool==='function'?toBool(t.completed):t.completed===true) return false;
+        return deriveRequestPhase(t)<4;
       });
-      return { percent: total?Math.round(sum/total):0, done, total };
+      const total=active.length;
+      // 完了報告/確認待ち(phase3以降)に到達したタスク数を達成とみなす
+      const done=active.filter(t=>deriveRequestPhase(t)>=3).length;
+      return { percent: total?Math.round(done/total*100):0, done, total };
     }
 
     async function loadIsoGoal(){
@@ -4108,7 +4107,7 @@
       if(titleEl) titleEl.textContent=s.title?s.title:'ISO取得 達成度';
       if(pctEl) pctEl.textContent=total?(percent+'%'):'--';
       if(fillEl) fillEl.style.width=(total?percent:0)+'%';
-      if(countEl) countEl.textContent='完了 '+done+' / 全 '+total+' 件';
+      if(countEl) countEl.textContent='完了報告 '+done+' / 全 '+total+' 件';
 
       const goal=isoParseDate(s.goalDate);
       const startBase=isoParseDate(s.startDate)||isoEarliestStart();
@@ -8031,6 +8030,7 @@
             await updateTask(id, { phase: newPhase, updatedAt: new Date().toISOString() });
           }
           renderRequestsPanel();
+          if (typeof renderIsoGoalCard === 'function') renderIsoGoalCard();
         });
       });
     }
