@@ -3221,10 +3221,10 @@
       <!-- PC版: 左カラム（ステータスサマリー + 期限ハイライト） -->
       <div class="dash-col dash-col--left">
         <!-- ISO取得 達成度メーター（左カラム最上部・進捗%平均 vs 予定ライン） -->
-        <aside class="iso-goal-panel" id="isoGoalPanel" aria-label="ISO取得 達成度">
+        <aside class="iso-goal-panel" id="isoGoalPanel" aria-label="依頼タスク達成度">
           <div class="iso-goal-header">
-            <h3 class="iso-goal-title" id="isoGoalTitle">ISO取得 達成度</h3>
-            <span class="iso-goal-deadline" id="isoGoalDeadline">目標日 未設定</span>
+            <h3 class="iso-goal-title" id="isoGoalTitle">依頼タスク達成度</h3>
+            <span class="iso-goal-count" id="isoGoalCount">叩き台提出 0 / 全 0 件</span>
           </div>
           <div class="iso-goal-bar-wrap">
             <div class="iso-goal-bar" id="isoGoalBar">
@@ -3232,10 +3232,6 @@
               <div class="iso-goal-plan" id="isoGoalPlan" style="display:none;"></div>
             </div>
             <strong class="iso-goal-percent" id="isoGoalPercent">--</strong>
-          </div>
-          <div class="iso-goal-foot">
-            <span class="iso-goal-pace" id="isoGoalPace">—</span>
-            <span class="iso-goal-count" id="isoGoalCount">完了 0 / 全 0 件</span>
           </div>
           <div class="iso-goal-edit" id="isoGoalEdit" hidden>
             <label>開始 <input type="date" id="isoGoalStartInput"></label>
@@ -4112,7 +4108,7 @@
       const paceEl=document.getElementById('isoGoalPace');
       const countEl=document.getElementById('isoGoalCount');
 
-      if(titleEl) titleEl.textContent=s.title?s.title:'ISO取得 達成度';
+      if(titleEl) titleEl.textContent=s.title?s.title:'依頼タスク達成度';
       if(pctEl) pctEl.textContent=total?(percent+'%'):'--';
       if(fillEl) fillEl.style.width=(total?percent:0)+'%';
       if(countEl) countEl.textContent='叩き台提出 '+done+' / 全 '+total+' 件';
