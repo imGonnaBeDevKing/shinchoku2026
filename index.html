@@ -3146,6 +3146,32 @@
         padding: 0 8px !important;
       }
     }
+
+    /* ===== ISO取得 達成度メーター ===== */
+    .iso-goal-panel{background:#fff;border:1px solid #E5E5EA;border-radius:16px;padding:16px 18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+    .iso-goal-header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+    .iso-goal-title{font-size:15px;font-weight:800;color:#1d1d1f;margin:0;}
+    .iso-goal-deadline{font-size:12px;font-weight:600;color:#6e6e73;}
+    .iso-goal-deadline.is-over{color:#FF3B30;}
+    .iso-goal-bar-wrap{display:flex;align-items:center;gap:12px;padding-top:16px;}
+    .iso-goal-bar{position:relative;flex:1;height:14px;background:#E5E5EA;border-radius:7px;}
+    .iso-goal-fill{position:absolute;left:0;top:0;height:100%;width:0;background:#34C759;border-radius:7px;transition:width .5s ease,background .3s ease;}
+    .iso-goal-fill.is-bad{background:#FF3B30;}
+    .iso-goal-plan{position:absolute;top:-4px;bottom:-4px;width:2px;background:#1d1d1f;transform:translateX(-1px);z-index:2;}
+    .iso-goal-plan::after{content:'予定';position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;color:#1d1d1f;white-space:nowrap;}
+    .iso-goal-percent{font-size:24px;font-weight:800;color:#1d1d1f;min-width:56px;text-align:right;line-height:1;}
+    .iso-goal-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap;}
+    .iso-goal-pace{font-size:13px;font-weight:700;color:#6e6e73;}
+    .iso-goal-pace.is-good{color:#34C759;}
+    .iso-goal-pace.is-bad{color:#FF3B30;}
+    .iso-goal-count{font-size:12px;color:#6e6e73;}
+    .iso-goal-edit{margin-top:14px;padding-top:12px;border-top:1px solid #F0F0F2;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+    .iso-goal-edit[hidden]{display:none;}
+    .iso-goal-edit label{font-size:12px;color:#6e6e73;display:inline-flex;align-items:center;gap:4px;}
+    .iso-goal-edit input[type=date],.iso-goal-edit input[type=text]{font-size:13px;padding:5px 8px;border:1px solid #D1D1D6;border-radius:8px;font-family:inherit;}
+    .iso-goal-edit input[type=text]{flex:1;min-width:120px;}
+    .iso-goal-save{font-size:13px;font-weight:700;color:#fff;background:#0071e3;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;}
+    .iso-goal-save:hover{background:#0077ed;}
   </style>
 </head>
 <body>
@@ -3183,6 +3209,31 @@
     <div class="main-grid">
       <!-- PC版: 左カラム（ステータスサマリー + 期限ハイライト） -->
       <div class="dash-col dash-col--left">
+        <!-- ISO取得 達成度メーター（左カラム最上部・進捗%平均 vs 予定ライン） -->
+        <aside class="iso-goal-panel" id="isoGoalPanel" aria-label="ISO取得 達成度">
+          <div class="iso-goal-header">
+            <h3 class="iso-goal-title" id="isoGoalTitle">ISO取得 達成度</h3>
+            <span class="iso-goal-deadline" id="isoGoalDeadline">目標日 未設定</span>
+          </div>
+          <div class="iso-goal-bar-wrap">
+            <div class="iso-goal-bar" id="isoGoalBar">
+              <div class="iso-goal-fill" id="isoGoalFill"></div>
+              <div class="iso-goal-plan" id="isoGoalPlan" style="display:none;"></div>
+            </div>
+            <strong class="iso-goal-percent" id="isoGoalPercent">--</strong>
+          </div>
+          <div class="iso-goal-foot">
+            <span class="iso-goal-pace" id="isoGoalPace">—</span>
+            <span class="iso-goal-count" id="isoGoalCount">完了 0 / 全 0 件</span>
+          </div>
+          <div class="iso-goal-edit" id="isoGoalEdit" hidden>
+            <label>開始 <input type="date" id="isoGoalStartInput"></label>
+            <label>目標 <input type="date" id="isoGoalGoalInput"></label>
+            <input type="text" id="isoGoalTitleInput" placeholder="例: ISO27001 認証取得">
+            <button type="button" class="iso-goal-save" id="isoGoalSaveBtn">保存</button>
+          </div>
+        </aside>
+
         <!-- PC版: ステータスサマリーカード（緊急/注意/順調/期限なし） -->
         <aside class="status-summary-panel" id="statusSummaryPanel" aria-label="ステータスサマリー">
           <div class="status-summary-grid">
@@ -3570,6 +3621,8 @@
     let currentUser = null;
     let isAdmin = false;
     let tasks = [];
+    let isoGoalSettings = null;
+    let isoGoalLoaded = false;
     let newTaskCategories = [];
 
     // ===================================================
@@ -3980,6 +4033,8 @@
         if (typeof renderTodayPanel === 'function') renderTodayPanel();
         // 依頼確認カード
         if (typeof renderRequestsPanel === 'function') renderRequestsPanel();
+        // ISO取得 達成度メーター
+        if (typeof renderIsoGoalCard === 'function') renderIsoGoalCard();
       } catch (error) {
         console.error('renderMainHighlights error:', error);
         elements.mainHighlights.innerHTML = `
@@ -3987,6 +4042,130 @@
             <p>データの読み込みに失敗しました</p>
           </div>
         `;
+      }
+    }
+
+    // ===================================================
+    // ISO取得 達成度メーター - 進捗%平均 vs 予定ライン
+    // ===================================================
+    function isoParseDate(s){ if(!s) return null; const d=new Date(s+'T00:00:00'); return isNaN(d.getTime())?null:d; }
+    function isoDaysBetween(a,b){ return Math.round((b-a)/86400000); }
+
+    function isoEarliestStart(){
+      const ds=(tasks||[]).map(t=>t&&t.createdAt).filter(Boolean).map(x=>new Date(x)).filter(d=>!isNaN(d.getTime()));
+      if(!ds.length) return null;
+      const min=new Date(Math.min(...ds.map(d=>d.getTime()))); min.setHours(0,0,0,0); return min;
+    }
+
+    function computeIsoAchievement(){
+      const list=Array.isArray(tasks)?tasks:[];
+      const total=list.length; let sum=0, done=0;
+      list.forEach(t=>{
+        const completed=t.completed===true;
+        let p=completed?100:Number(t.progress);
+        if(!Number.isFinite(p)) p=0;
+        p=Math.max(0,Math.min(100,p));
+        sum+=p;
+        if(completed||p>=100) done+=1;
+      });
+      return { percent: total?Math.round(sum/total):0, done, total };
+    }
+
+    async function loadIsoGoal(){
+      try{
+        const snap=await getDoc(doc(db,'app_settings','iso_goal'));
+        isoGoalSettings=snap.exists()?snap.data():null;
+      }catch(e){ console.error('loadIsoGoal error:',e); isoGoalSettings=null; }
+    }
+
+    async function saveIsoGoal(payload){
+      try{
+        await setDoc(doc(db,'app_settings','iso_goal'),{ ...payload, updatedAt:new Date().toISOString() },{ merge:true });
+        isoGoalSettings={ ...(isoGoalSettings||{}), ...payload };
+        if(typeof showToast==='function') showToast('ISO目標を保存しました');
+      }catch(e){
+        console.error('saveIsoGoal error:',e);
+        const msg=(typeof getFirestoreErrorMessage==='function')?getFirestoreErrorMessage(e):((e&&e.message)||'');
+        if(typeof showToast==='function') showToast('ISO目標の保存に失敗しました: '+msg+(e&&e.code?(' ('+e.code+')'):''));
+      }
+    }
+
+    function renderIsoGoalCard(){
+      const panel=document.getElementById('isoGoalPanel');
+      if(!panel) return;
+      if(!isoGoalLoaded){ isoGoalLoaded=true; loadIsoGoal().then(()=>renderIsoGoalCard()); }
+
+      const { percent, done, total }=computeIsoAchievement();
+      const s=isoGoalSettings||{};
+      const titleEl=document.getElementById('isoGoalTitle');
+      const fillEl=document.getElementById('isoGoalFill');
+      const planEl=document.getElementById('isoGoalPlan');
+      const pctEl=document.getElementById('isoGoalPercent');
+      const dueEl=document.getElementById('isoGoalDeadline');
+      const paceEl=document.getElementById('isoGoalPace');
+      const countEl=document.getElementById('isoGoalCount');
+
+      if(titleEl) titleEl.textContent=s.title?s.title:'ISO取得 達成度';
+      if(pctEl) pctEl.textContent=total?(percent+'%'):'--';
+      if(fillEl) fillEl.style.width=(total?percent:0)+'%';
+      if(countEl) countEl.textContent='完了 '+done+' / 全 '+total+' 件';
+
+      const goal=isoParseDate(s.goalDate);
+      const startBase=isoParseDate(s.startDate)||isoEarliestStart();
+
+      if(goal){
+        const today=new Date(); today.setHours(0,0,0,0);
+        const remaining=isoDaysBetween(today,goal);
+        if(dueEl){
+          if(remaining>=0){ dueEl.textContent='目標 '+s.goalDate+' ・ 残り '+remaining+' 日'; dueEl.classList.remove('is-over'); }
+          else { dueEl.textContent='目標 '+s.goalDate+' ・ '+Math.abs(remaining)+' 日超過'; dueEl.classList.add('is-over'); }
+        }
+        let planPercent=null;
+        if(startBase&&goal.getTime()>startBase.getTime()){
+          const totalMs=goal-startBase, elapsed=today-startBase;
+          planPercent=Math.max(0,Math.min(100,Math.round(elapsed/totalMs*100)));
+        }
+        if(planEl){
+          if(planPercent===null){ planEl.style.display='none'; }
+          else { planEl.style.display=''; planEl.style.left=planPercent+'%'; }
+        }
+        const behind=(planPercent!==null&&total>0&&percent<planPercent);
+        if(fillEl) fillEl.classList.toggle('is-bad',behind);
+        if(paceEl){
+          if(planPercent===null||!total){ paceEl.textContent='—'; paceEl.className='iso-goal-pace'; }
+          else {
+            const diff=percent-planPercent;
+            if(diff>=0){ paceEl.textContent='順調（予定 +'+diff+'%）'; paceEl.className='iso-goal-pace is-good'; }
+            else { paceEl.textContent='遅れ（予定 '+diff+'%）'; paceEl.className='iso-goal-pace is-bad'; }
+          }
+        }
+      } else {
+        if(dueEl){ dueEl.textContent=isAdmin?'目標日 未設定（下で設定）':'目標日 未設定'; dueEl.classList.remove('is-over'); }
+        if(planEl) planEl.style.display='none';
+        if(fillEl) fillEl.classList.remove('is-bad');
+        if(paceEl){ paceEl.textContent='—'; paceEl.className='iso-goal-pace'; }
+      }
+
+      const editEl=document.getElementById('isoGoalEdit');
+      if(editEl){
+        editEl.hidden=!isAdmin;
+        if(isAdmin){
+          const si=document.getElementById('isoGoalStartInput');
+          const gi=document.getElementById('isoGoalGoalInput');
+          const ti=document.getElementById('isoGoalTitleInput');
+          if(si&&document.activeElement!==si) si.value=s.startDate||'';
+          if(gi&&document.activeElement!==gi) gi.value=s.goalDate||'';
+          if(ti&&document.activeElement!==ti) ti.value=s.title||'';
+          const saveBtn=document.getElementById('isoGoalSaveBtn');
+          if(saveBtn) saveBtn.onclick=async()=>{
+            await saveIsoGoal({
+              startDate:(document.getElementById('isoGoalStartInput').value||null),
+              goalDate:(document.getElementById('isoGoalGoalInput').value||null),
+              title:((document.getElementById('isoGoalTitleInput').value||'').trim()||null)
+            });
+            renderIsoGoalCard();
+          };
+        }
       }
     }
 
@@ -7797,6 +7976,7 @@
       // 依頼者プルダウン変更ハンドラ（Firestore tasks に永続化）
       list.querySelectorAll('.request-requester-select').forEach(sel => {
         sel.addEventListener('change', async (e) => {
+          if (!currentUser) return; // ログイン時のみ変更可
           const id = e.target.dataset.id;
           const value = e.target.value;
           const target = (tasks || []).find(t => t.id === id);
@@ -7815,6 +7995,7 @@
           }
         });
         el.addEventListener('blur', async () => {
+          if (!currentUser) return; // ログイン時のみ変更可
           const id = el.dataset.id;
           const value = el.textContent.trim();
           const target = (tasks || []).find(t => t.id === id);
@@ -7840,6 +8021,7 @@
       // フェーズステップクリック → phase 更新（Firestore tasks に永続化）
       list.querySelectorAll('.request-phase-step').forEach(btn => {
         btn.addEventListener('click', async (e) => {
+          if (!currentUser) return; // ログイン時のみ変更可
           const id = btn.dataset.id;
           const newPhase = Number(btn.dataset.phase);
           if (!id || Number.isNaN(newPhase)) return;
@@ -7854,6 +8036,7 @@
     }
 
     function renderRequestCard(r) {
+      const canEdit = !!currentUser; // ログイン時のみ編集可
       const userOptions = REQUEST_USERS.map(u =>
         `<option value="${u}"${u === r.requester ? ' selected' : ''}>${u}</option>`
       ).join('');
@@ -7862,7 +8045,7 @@
         const connector = idx < REQUEST_PHASES.length - 1
           ? `<div class="request-phase-connector ${idx < r.phase ? 'done' : ''}"></div>`
           : '';
-        return `<button type="button" class="request-phase-step ${state}" data-id="${r.id}" data-phase="${idx}" aria-label="${label}に変更">
+        return `<button type="button" class="request-phase-step ${state}" data-id="${r.id}" data-phase="${idx}" aria-label="${label}に変更"${canEdit ? '' : ' disabled'}>
           <div class="request-phase-circle"></div>
           <div class="request-phase-label">${label}</div>
         </button>${connector}`;
@@ -7883,7 +8066,7 @@
             </span>
             <span class="request-header-requester">
               依頼者:
-              <select class="request-requester-select" data-id="${r.id}">${userOptions}</select>
+              <select class="request-requester-select" data-id="${r.id}"${canEdit ? '' : ' disabled'}>${userOptions}</select>
             </span>
             <span class="request-header-spacer"></span>
             <span class="request-ball ${r.ball}">
@@ -7892,7 +8075,7 @@
           </div>
           <div class="request-phases">${phases}</div>
           <div class="request-memo-wrap">
-            <div class="request-memo${r.memoIsPlaceholder ? ' is-placeholder' : ''}" contenteditable="true" data-id="${r.id}" spellcheck="false">${escapeHtml(r.memo)}</div>
+            <div class="request-memo${r.memoIsPlaceholder ? ' is-placeholder' : ''}" contenteditable="${canEdit ? 'true' : 'false'}" data-id="${r.id}" spellcheck="false">${escapeHtml(r.memo)}</div>
           </div>
           <div class="request-right">
             <span class="request-updated">最終更新: <strong>${escapeHtml(r.updated)}</strong></span>
