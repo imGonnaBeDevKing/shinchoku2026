@@ -1330,6 +1330,11 @@
     .main-highlights .task-list {
       overflow-x: hidden;
     }
+    /* 緊急(zetsu)だけは高さ制限なし・全件表示（件数に応じて縦幅が自動変動） */
+    .main-highlights .deadline-section.zetsu .task-list {
+      max-height: none;
+      overflow-y: visible;
+    }
 
     .task-card {
       max-width: 100%;
@@ -4196,6 +4201,7 @@
         if (!isGuestView) return;
 
         const section = taskList.closest('.deadline-section');
+        if (section?.classList.contains('zetsu')) return; // 緊急は全件表示（高さ制限しない）
         const visibleItems = section?.classList.contains('jun') || section?.classList.contains('nodeadline')
           ? 1
           : section?.classList.contains('ran')
