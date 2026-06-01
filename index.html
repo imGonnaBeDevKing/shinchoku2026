@@ -2597,6 +2597,17 @@
       cursor: pointer;
     }
     .request-history-btn:hover { background: #F5F5F7; }
+    .request-delete-btn {
+      font-size: 11px;
+      padding: 4px 10px;
+      border: 1px solid #FF3B30;
+      border-radius: 6px;
+      background: #fff;
+      color: #FF3B30;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .request-delete-btn:hover { background: #FF3B30; color: #fff; }
 
     @media (max-width: 1023px) {
       .request-card {
@@ -4059,13 +4070,10 @@
 
     function computeIsoAchievement(){
       const list=Array.isArray(tasks)?tasks:[];
-      // 完了(phase5)は確認後に削除される運用のため母数から除外
-      const active=list.filter(t=>{
-        if(typeof toBool==='function'?toBool(t.completed):t.completed===true) return false;
-        return deriveRequestPhase(t)<5;
-      });
+      // 全アクティブ（削除前まで）を母数とする。完了/削除済みのみ除外
+      const active=list.filter(t=>!(typeof toBool==='function'?toBool(t.completed):t.completed===true));
       const total=active.length;
-      // 叩き台提出(phase3以降=修正中含む)に到達したタスク数を達成とみなす
+      // 叩き台提出(phase3以降=修正中・承認待ち含む)に到達したタスク数を達成とみなす
       const done=active.filter(t=>deriveRequestPhase(t)>=3).length;
       return { percent: total?Math.round(done/total*100):0, done, total };
     }
@@ -7854,7 +7862,7 @@
     // データ源は global tasks（緊急/注意/順調/期限なしと同一）
     // ===================================================
     const REQUEST_USERS = ['本人', '部長', '社長様', '目黒さん', '島村さん', '奥田さん', '船木さん', '企画部'];
-    const REQUEST_PHASES = ['依頼', '着手', '進行中', '叩き台提出', '修正中', '完了'];
+    const REQUEST_PHASES = ['依頼', '着手', '進行中', '叩き台提出', '修正中', '承認待ち'];
 
     function deriveRequestPhase(task) {
       // 明示的に保存された phase があれば優先
@@ -7908,15 +7916,14 @@
       const phase = deriveRequestPhase(task);
       if (phase === 3) return { key: 'boss', label: '上司ボール (レビュー待ち)' };
       if (phase === 4) return { key: 'self', label: '塩崎ボール (修正中)' };
-      if (phase === 5) return { key: 'self', label: '完了' };
+      if (phase === 5) return { key: 'boss', label: '上司ボール (承認待ち)' };
       return { key: 'self', label: '塩崎ボール' };
     }
     function buildRequestsFromTasks() {
       const src = Array.isArray(tasks) ? tasks : [];
-      // 完了済みタスク（task.completed=true もしくは phase=5 完了）は除外
+      // 完了済み(task.completed=true)のみ除外。承認待ちまでは削除されるまで表示
       const active = src.filter(t => {
         if (typeof toBool === 'function' && toBool(t.completed)) return false;
-        if (Number.isInteger(t.phase) && t.phase >= 5) return false;
         return true;
       });
       // mainHighlights と同じ並び替え（compareTasks）
@@ -8035,6 +8042,43 @@
           if (typeof renderIsoGoalCard === 'function') renderIsoGoalCard();
         });
       });
+      // 完了して削除（ログイン限定）→ work_logs に記録してから tasks を削除
+      list.querySelectorAll('.request-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!currentUser) return; // ログイン時のみ削除可
+          const id = btn.dataset.id;
+          const title = btn.dataset.title || '(無題)';
+          if (!id) return;
+          const confirmed = (typeof confirmDialog === 'function')
+            ? await confirmDialog('deleteRequest', { title: '完了して削除', message: `「${title}」を完了として削除し、ログに記録します。よろしいですか？`, danger: true, remember: false })
+            : window.confirm(`「${title}」を完了として削除し、ログに記録します。よろしいですか？`);
+          if (!confirmed) return;
+          btn.disabled = true;
+          try {
+            const when = new Date();
+            await addDoc(collection(db, 'work_logs'), {
+              taskId: id,
+              taskName: title,
+              completedAt: when.toISOString(),
+              completedAtDisplay: (typeof formatDisplayDate === 'function') ? formatDisplayDate(when) : when.toLocaleString('ja-JP'),
+              completedAtEpoch: when.getTime(),
+              user: currentUser?.email || 'unknown'
+            });
+            if (typeof deleteTask === 'function') {
+              await deleteTask(id);
+            } else {
+              await deleteDoc(doc(db, 'tasks', id));
+            }
+            if (typeof showToast === 'function') showToast(`「${title}」を完了・削除しました`);
+            await renderDashboard();
+            await renderMainHighlights();
+          } catch (error) {
+            console.error('request delete error:', error);
+            if (typeof showToast === 'function') showToast('削除に失敗しました: ' + (error.code || error.message));
+            btn.disabled = false;
+          }
+        });
+      });
     }
 
     function renderRequestCard(r) {
@@ -8082,6 +8126,7 @@
           <div class="request-right">
             <span class="request-updated">最終更新: <strong>${escapeHtml(r.updated)}</strong></span>
             <button type="button" class="request-history-btn" data-id="${r.id}">履歴を見る ↗</button>
+            ${canEdit ? `<button type="button" class="request-delete-btn" data-id="${r.id}" data-title="${escapeHtml(r.title)}">完了して削除 🗑</button>` : ''}
           </div>
         </div>
       `;
