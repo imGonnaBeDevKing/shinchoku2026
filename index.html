@@ -1122,6 +1122,17 @@
     .main-highlights .task-card .task-deadline-display,
     .main-highlights .task-card .task-deadline-input { font-size: 7px !important; }
     .main-highlights .task-card .task-remaining { font-size: 7px !important; }
+    /* ハイライト内の優先度カードは余白を詰めて1行高さに揃える */
+    .main-highlights .task-card.priority-1,
+    .main-highlights .task-card.priority-2,
+    .main-highlights .task-card.priority-3 {
+      padding: 5px 8px;
+    }
+    .main-highlights .task-card.priority-1::after,
+    .main-highlights .task-card.priority-2::after,
+    .main-highlights .task-card.priority-3::after {
+      top: 2px; left: 2px; right: 2px; bottom: 2px;
+    }
   </style>
   <!-- Inlined from src/hoshitori/hoshitori.css -->
   <style>
