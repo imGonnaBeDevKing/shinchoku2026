@@ -2462,6 +2462,13 @@
       align-items: center;
     }
     .request-header      { grid-area: header; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .request-drag-handle { cursor: grab; color: var(--text-secondary); display: inline-flex; align-items: center; padding: 2px; user-select: none; touch-action: none; flex: 0 0 auto; }
+    .request-drag-handle:hover { color: var(--text-primary); }
+    .request-drag-handle:active { cursor: grabbing; }
+    .request-drag-handle svg { width: 16px; height: 16px; pointer-events: none; }
+    .request-card.dragging { opacity: 0.5; }
+    .request-card.drop-target-above { box-shadow: inset 0 2px 0 0 var(--color-jun); }
+    .request-card.drop-target-below { box-shadow: inset 0 -2px 0 0 var(--color-jun); }
     .request-phases      { grid-area: phases; }
     .request-memo-wrap   { grid-area: memo; max-width: 50%; justify-self: start; width: 100%; }
     .request-right       { grid-area: right; }
@@ -8127,6 +8134,107 @@
           }
         });
       });
+      // ログイン時のみ：依頼カードのグループ内ドラッグ並び替えを有効化
+      if (currentUser) {
+        enableRequestSorting(list, ':scope > .request-card');
+        const othersList = list.querySelector('.requests-others-list');
+        if (othersList) enableRequestSorting(othersList, ':scope > .request-card');
+      }
+    }
+
+    // 依頼カードのドラッグ並び替え（Pointer Events / グループ内のみ / manualOrder永続化）
+    function enableRequestSorting(container, cardSelector) {
+      if (!container || container.dataset.reqSortingEnabled === 'true') return;
+      container.dataset.reqSortingEnabled = 'true';
+
+      let draggedCard = null;
+      let longPressTimer = null;
+      let isDragging = false;
+      let originalOrder = [];
+
+      const getCards = () => [...container.querySelectorAll(cardSelector)];
+      const clearDropTargets = () => {
+        getCards().forEach(el => el.classList.remove('drop-target-above', 'drop-target-below'));
+      };
+      const getTargetCard = (y) => {
+        for (const card of getCards()) {
+          const rect = card.getBoundingClientRect();
+          if (y >= rect.top && y <= rect.bottom) {
+            return { card, position: y < rect.top + rect.height / 2 ? 'above' : 'below' };
+          }
+        }
+        return null;
+      };
+      const cleanup = () => {
+        if (draggedCard) draggedCard.classList.remove('dragging');
+        clearDropTargets();
+        draggedCard = null;
+        isDragging = false;
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      };
+      const rollbackDOM = () => {
+        originalOrder.forEach(id => {
+          const card = container.querySelector(`.request-card[data-id="${id}"]`);
+          if (card) container.appendChild(card);
+        });
+      };
+      const finishDrag = async (targetInfo) => {
+        if (!draggedCard || !targetInfo || draggedCard === targetInfo.card) { cleanup(); return; }
+        const cards = getCards();
+        const fromIndex = cards.indexOf(draggedCard);
+        let toIndex = cards.indexOf(targetInfo.card);
+        if (targetInfo.position === 'below') toIndex++;
+        if (fromIndex < toIndex) toIndex--;
+        if (fromIndex === toIndex) { cleanup(); return; }
+        cards.splice(fromIndex, 1);
+        cards.splice(toIndex, 0, draggedCard);
+        cards.forEach(c => container.appendChild(c));
+        const idsInOrder = cards.map(c => c.dataset.id);
+        cleanup();
+        try {
+          await persistTaskOrder(idsInOrder);
+          await renderDashboard();
+          await renderMainHighlights();
+          renderRequestsPanel();
+        } catch (e) {
+          console.error('依頼並び替え永続化エラー:', e);
+          if (typeof showToast === 'function') showToast('並び替えの保存に失敗しました: ' + (e.code || e.message));
+          rollbackDOM();
+        }
+      };
+
+      container.addEventListener('pointerdown', (e) => {
+        const handle = e.target.closest('.request-drag-handle[data-drag-type="request"]');
+        if (!handle) return;
+        const card = handle.closest('.request-card');
+        if (!card || card.parentElement !== container) return;
+        e.preventDefault();
+        originalOrder = getCards().map(c => c.dataset.id);
+        const startDrag = () => {
+          draggedCard = card;
+          isDragging = true;
+          card.classList.add('dragging');
+          card.setPointerCapture(e.pointerId);
+        };
+        if (e.pointerType === 'touch') longPressTimer = setTimeout(startDrag, 300);
+        else startDrag();
+      });
+      container.addEventListener('pointermove', (e) => {
+        if (longPressTimer && e.pointerType === 'touch') { clearTimeout(longPressTimer); longPressTimer = null; }
+        if (!isDragging || !draggedCard) return;
+        e.preventDefault();
+        clearDropTargets();
+        const target = getTargetCard(e.clientY);
+        if (target && target.card !== draggedCard) {
+          target.card.classList.add(target.position === 'above' ? 'drop-target-above' : 'drop-target-below');
+        }
+      });
+      container.addEventListener('pointerup', async (e) => {
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        if (!isDragging || !draggedCard) return;
+        await finishDrag(getTargetCard(e.clientY));
+      });
+      container.addEventListener('pointercancel', cleanup);
     }
 
     function renderRequestCard(r) {
@@ -8150,6 +8258,7 @@
       return `
         <div class="request-card" data-id="${r.id}">
           <div class="request-header">
+            ${canEdit ? `<span class="request-drag-handle" data-drag-type="request" title="ドラッグで並び替え" aria-label="並び替え"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm8-16a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg></span>` : ''}
             <span class="request-status-dot ${r.dot}"></span>
             <span class="request-title">${escapeHtml(r.title)}</span>
             ${stale}
