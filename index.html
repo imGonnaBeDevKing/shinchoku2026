@@ -4078,6 +4078,9 @@
         // メイン領域のイベントリスナー設定（管理者編集用）
         setupMainHighlightsEventListeners();
 
+        // ログイン時のみ：ハイライト各セクション内のドラッグ並び替えを有効化
+        if (isAdmin && typeof enableDashboardSorting === 'function') enableDashboardSorting();
+
         // PC版: インラインカレンダーを初期化/更新
         if (typeof initInlineCalendar === 'function') initInlineCalendar();
         // スマホ版: モバイルカレンダーを初期化/更新
