@@ -1127,6 +1127,30 @@
     .main-highlights .task-card .task-deadline-display,
     .main-highlights .task-card .task-deadline-input { font-size: 7px !important; }
     .main-highlights .task-card .task-remaining { font-size: 7px !important; }
+    /* ハイライト行: 入力欄・納期・ボタンの高さを揃えて段差をなくし1行に見せる */
+    .main-highlights .task-card .task-header { flex-wrap: nowrap; align-items: center; }
+    .main-highlights .task-card .task-title-input {
+      height: 22px;
+      min-height: 22px;
+      padding-top: 0;
+      padding-bottom: 0;
+      line-height: 22px;
+    }
+    .main-highlights .task-card .task-deadline-display {
+      height: 22px;
+      min-height: 22px;
+      padding-top: 0;
+      padding-bottom: 0;
+      line-height: 20px;
+      display: flex;
+      align-items: center;
+    }
+    .main-highlights .task-card .btn-priority,
+    .main-highlights .task-card .btn-icon,
+    .main-highlights .task-card .schedule-handle {
+      width: 22px;
+      height: 22px;
+    }
     /* ハイライト内の優先度カードは余白を詰めて1行高さに揃える */
     .main-highlights .task-card.priority-1,
     .main-highlights .task-card.priority-2,
@@ -1220,8 +1244,10 @@
   .task-card.drop-target-above { box-shadow: inset 0 2px 0 0 var(--color-jun); }
   .task-card.drop-target-below { box-shadow: inset 0 -2px 0 0 var(--color-jun); }
   .task-card .drag-handle { margin-right: var(--space-sm); }
-  /* メインダッシュボード（トップページ）ではドラッグハンドル非表示 */
+  /* メインダッシュボード（トップページ）：非ログイン時はハンドル非表示 */
   .main-highlights .task-card .drag-handle { display: none !important; }
+  /* ログイン（admin-mode）時のみ、ハイライトでも並び替えハンドルを表示 */
+  body.admin-mode .main-highlights .task-card .drag-handle { display: inline-flex !important; align-items: center; }
 
   /* ===================================================
      優先度キラキラエフェクト（枠線だけがキラキラ流れる）
