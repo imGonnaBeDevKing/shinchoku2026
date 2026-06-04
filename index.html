@@ -184,6 +184,7 @@
       line-height: 1;
       letter-spacing: 0.01em;
       box-sizing: border-box;
+      text-decoration: none;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       border-width: 1px;
@@ -3257,6 +3258,7 @@
       <button class="btn-worklog" id="btnOpenLocation" style="display:none;">場所</button>
       <button class="btn-worklog" id="btnOpenCalendar" style="display:none;">暦</button>
       <button class="btn-worklog" id="btnOpenWorklog">ログ</button>
+      <a class="btn-worklog" id="btnOpenJmotto" href="https://www.j-motto.co.jp" target="_blank" rel="noopener noreferrer" title="J-MOTTO スケジュール管理を開く">予定表</a>
       <button class="btn-login" id="btnLogin">
         ログイン
       </button>
@@ -8097,7 +8099,8 @@
           if (typeof renderIsoGoalCard === 'function') renderIsoGoalCard();
         });
       });
-      // 完了して削除（ログイン限定）→ work_logs に記録してから tasks を削除
+      // 完了して削除（ログイン限定）→ work_logs に記録し completed:true でカードから除外
+      // （物理削除しないことで、カレンダー上は完了済み（グレー）の予定として残す）
       list.querySelectorAll('.request-delete-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (!currentUser) return; // ログイン時のみ削除可
@@ -8105,26 +8108,14 @@
           const title = btn.dataset.title || '(無題)';
           if (!id) return;
           const confirmed = (typeof confirmDialog === 'function')
-            ? await confirmDialog('deleteRequest', { title: '完了して削除', message: `「${title}」を完了として削除し、ログに記録します。よろしいですか？`, danger: true, remember: false })
-            : window.confirm(`「${title}」を完了として削除し、ログに記録します。よろしいですか？`);
+            ? await confirmDialog('deleteRequest', { title: '完了して削除', message: `「${title}」を完了として記録します。カードからは消えますが、カレンダーには完了済みとして残ります。よろしいですか？`, danger: true, remember: false })
+            : window.confirm(`「${title}」を完了として記録します。カードからは消えますが、カレンダーには完了済みとして残ります。よろしいですか？`);
           if (!confirmed) return;
           btn.disabled = true;
           try {
-            const when = new Date();
-            await addDoc(collection(db, 'work_logs'), {
-              taskId: id,
-              taskName: title,
-              completedAt: when.toISOString(),
-              completedAtDisplay: (typeof formatDisplayDate === 'function') ? formatDisplayDate(when) : when.toLocaleString('ja-JP'),
-              completedAtEpoch: when.getTime(),
-              user: currentUser?.email || 'unknown'
-            });
-            if (typeof deleteTask === 'function') {
-              await deleteTask(id);
-            } else {
-              await deleteDoc(doc(db, 'tasks', id));
-            }
-            if (typeof showToast === 'function') showToast(`「${title}」を完了・削除しました`);
+            const taskObj = (typeof tasks !== 'undefined') ? tasks.find(t => t.id === id) : null;
+            await completeTaskAndLog(id, title, taskObj);
+            if (typeof showToast === 'function') showToast(`「${title}」を完了しました（カレンダーには残ります）`);
             await renderDashboard();
             await renderMainHighlights();
           } catch (error) {
