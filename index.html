@@ -3685,6 +3685,7 @@
     let currentUser = null;
     let isAdmin = false;
     let tasks = [];
+    let externalEvents = []; // J-MOTTO等の外部予定（external_eventsコレクション）
     let isoGoalSettings = null;
     let isoGoalLoaded = false;
     let newTaskCategories = [];
@@ -3912,6 +3913,52 @@
         console.error('Error fetching tasks:', error);
         return [];
       }
+    }
+
+    // 外部予定取得（J-MOTTO→Outlook→Power Automate経由で external_events に書き込まれる）
+    // データ構造想定: { title, start(YYYY-MM-DD or ISO), end?, allDay?, source:'jmotto', location? }
+    async function fetchExternalEvents() {
+      try {
+        const snapshot = await getDocs(collection(db, 'external_events'));
+        externalEvents = snapshot.docs.map(docu => ({ id: docu.id, ...docu.data() }));
+        return externalEvents;
+      } catch (error) {
+        // コレクション未作成・権限なしでもダッシュボード本体は動作させる
+        console.warn('external_events fetch skipped:', error?.code || error?.message);
+        externalEvents = [];
+        return [];
+      }
+    }
+
+    // 外部予定 → FullCalendarイベント変換（タスクとは別色で表示）
+    function externalEventsToCalendarEvents(fetchInfo = null) {
+      const range = getCalendarRangeBounds(fetchInfo);
+      const toDateKey = (v) => (typeof v === 'string' ? v.slice(0, 10) : '');
+      return externalEvents
+        .filter((ev) => {
+          const key = toDateKey(ev.start);
+          if (!key) return false;
+          if (!range.start || !range.endInclusive) return true;
+          return key >= range.start && key <= range.endInclusive;
+        })
+        .map((ev) => ({
+          id: `ext-${ev.id}`,
+          title: ev.title || '(無題)',
+          start: ev.start,
+          end: ev.end || undefined,
+          allDay: ev.allDay !== false,
+          backgroundColor: '#5856D6',
+          borderColor: '#5856D6',
+          textColor: '#ffffff',
+          editable: false,
+          classNames: ['external-event'],
+          extendedProps: {
+            isHoliday: false,
+            isRecurringGhost: false,
+            isExternal: true,
+            source: ev.source || 'external'
+          }
+        }));
     }
 
     // ===================================================
@@ -5474,13 +5521,15 @@
 
     async function calendarEvents(fetchInfo, successCallback, failureCallback) {
       const taskEvents = tasksToCalendarEvents(fetchInfo);
+      await fetchExternalEvents();
+      const extEvents = externalEventsToCalendarEvents(fetchInfo);
 
       try {
         const holidayEvents = await holidaysToCalendarEvents(fetchInfo);
-        successCallback([...holidayEvents, ...taskEvents]);
+        successCallback([...holidayEvents, ...extEvents, ...taskEvents]);
       } catch (error) {
         console.error('Error loading holiday events:', error);
-        successCallback(taskEvents);
+        successCallback([...extEvents, ...taskEvents]);
         if (typeof failureCallback === 'function') {
           failureCallback(error);
         }
