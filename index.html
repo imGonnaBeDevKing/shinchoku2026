@@ -4293,12 +4293,12 @@
         if (!isGuestView) return;
 
         const section = taskList.closest('.deadline-section');
-        if (section?.classList.contains('zetsu')) return; // 緊急は全件表示（高さ制限しない）
-        const visibleItems = section?.classList.contains('jun') || section?.classList.contains('nodeadline')
-          ? 1
-          : section?.classList.contains('ran')
-            ? 2
-            : 3;
+        // 緊急(zetsu)・注意(ran)・順調(jun)は全件表示（高さ制限しない）
+        if (section?.classList.contains('zetsu')
+            || section?.classList.contains('ran')
+            || section?.classList.contains('jun')) return;
+        // 期限なし(nodeadline)のみスクロール（1件分の高さに制限）
+        const visibleItems = 1;
 
         const cards = [...taskList.querySelectorAll('.task-card')];
         if (cards.length <= visibleItems) return;
