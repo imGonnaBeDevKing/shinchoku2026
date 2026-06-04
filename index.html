@@ -432,8 +432,10 @@
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
     }
-    /* 緊急(zetsu)だけは全画面幅で高さ制限なし・全件表示 */
-    .main-highlights .deadline-section.zetsu .task-list {
+    /* 緊急(zetsu)・注意(ran)・順調(jun)は高さ制限なし・全件表示 */
+    .main-highlights .deadline-section.zetsu .task-list,
+    .main-highlights .deadline-section.ran .task-list,
+    .main-highlights .deadline-section.jun .task-list {
       max-height: none;
       overflow-y: visible;
     }
@@ -1118,16 +1120,16 @@
       gap: 4px;
     }
 
-    /* ===== main-highlights カード内フォント縮小（既存比 -3px） ===== */
-    .main-highlights .section-title { font-size: 10px !important; }
-    .main-highlights .section-count { font-size: 8px !important; }
-    .main-highlights .section-badge { font-size: 7px !important; }
+    /* ===== main-highlights カード内フォント（既存比 +3px 拡大） ===== */
+    .main-highlights .section-title { font-size: 13px !important; }
+    .main-highlights .section-count { font-size: 11px !important; }
+    .main-highlights .section-badge { font-size: 10px !important; }
     .main-highlights .task-card .task-title,
-    .main-highlights .task-card .task-title-input { font-size: 8px !important; }
+    .main-highlights .task-card .task-title-input { font-size: 11px !important; }
     .main-highlights .task-card .task-deadline,
     .main-highlights .task-card .task-deadline-display,
-    .main-highlights .task-card .task-deadline-input { font-size: 7px !important; }
-    .main-highlights .task-card .task-remaining { font-size: 7px !important; }
+    .main-highlights .task-card .task-deadline-input { font-size: 10px !important; }
+    .main-highlights .task-card .task-remaining { font-size: 10px !important; }
     /* ハイライト行: 入力欄・納期・ボタンの高さを揃えて段差をなくし1行に見せる */
     .main-highlights .task-card .task-header { flex-wrap: nowrap; align-items: center; }
     .main-highlights .task-card .task-title-input {
