@@ -1,2 +1,5 @@
 _pending.json
 ai-advice.json
+cron.log
+launchd.out.log
+launchd.err.log
