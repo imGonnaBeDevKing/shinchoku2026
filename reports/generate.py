@@ -93,9 +93,45 @@ def build_report(rows, today):
         "id": today.isoformat() + " " + now.strftime("%H:%M"),
         "generatedAt": now.isoformat(timespec="seconds"),
         "stats": {"total": len(rows), "active": len(active)},
+        "activeTitles": sorted(r["title"] for r in active),
         "over": over, "today": td, "soon": soon, "attn": attn,
         "recommend": rec,
     }
+
+
+def make_message(report, prev):
+    """前回スナップショットと比較し、完了は褒め、増加は励ます。"""
+    if not prev or "activeTitles" not in prev:
+        report["mood"] = "neutral"
+        report["message"] = "今日もコツコツいきましょう。状況を見守っています。"
+        report["done"] = []
+        report["added"] = []
+        return
+    prev_set = set(prev["activeTitles"])
+    cur_set = set(report["activeTitles"])
+    done = sorted(prev_set - cur_set)    # 前回は未完了 → 今回は消えた＝完了/削除
+    added = sorted(cur_set - prev_set)   # 今回新たに現れた未完了タスク
+    report["done"] = done
+    report["added"] = added
+    if done and added:
+        report["mood"] = "mixed"
+        report["message"] = (
+            f"🎉 {len(done)}件 片づきました、お見事です！"
+            f"そして新たに {len(added)}件 増えましたが、ここまで来たあなたなら大丈夫。一つずつ。"
+        )
+    elif done:
+        report["mood"] = "praise"
+        report["message"] = (
+            f"🎉 {len(done)}件 完了しました、素晴らしいです！この調子で着実に進めましょう。"
+        )
+    elif added:
+        report["mood"] = "cheer"
+        report["message"] = (
+            f"💪 タスクが {len(added)}件 増えました。焦らず優先度の高いものから。あなたなら捌けます。"
+        )
+    else:
+        report["mood"] = "neutral"
+        report["message"] = "変化なし。淡々と前進しましょう。次の1件に集中。"
 
 
 def load_existing():
@@ -123,8 +159,12 @@ def main():
         if "id" not in r:
             r["id"] = r.get("date", "") + " " + r.get("time", "00:00")
         existing.append(r)
-    reports = [r for r in existing if r.get("id") != report["id"]]
-    reports.append(report)
+    others = [r for r in existing if r.get("id") != report["id"]]
+    # 直近（自分より過去で最大のid）を前回として比較
+    past = sorted((r for r in others if r.get("id", "") < report["id"]),
+                  key=lambda x: x["id"], reverse=True)
+    make_message(report, past[0] if past else None)
+    reports = others + [report]
     reports.sort(key=lambda x: x["id"], reverse=True)
 
     body = json.dumps(reports, ensure_ascii=False, indent=2)
@@ -132,7 +172,10 @@ def main():
         f.write("window.SHINCHOKU_REPORTS = " + body + ";\n")
     print(f"[ok] {report['id']} : active={report['stats']['active']} "
           f"over={len(report['over'])} today={len(report['today'])} "
-          f"attn={len(report['attn'])} / 蓄積 {len(reports)}日分")
+          f"attn={len(report['attn'])} done={len(report.get('done',[]))} "
+          f"added={len(report.get('added',[]))} mood={report.get('mood')} "
+          f"/ 蓄積 {len(reports)}件")
+    print(f"     msg: {report.get('message','')}")
 
 
 if __name__ == "__main__":
