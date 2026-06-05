@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>shinchoku2026 朝のタスクレポート（振り返り）</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --line:#30363d; --text:#e6edf3; --sub:#8b949e;
+    --red:#FF3B30; --yellow:#FFCC00; --blue:#007AFF; --green:#3fb950;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",sans-serif;}
+  header{padding:20px 24px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  header h1{font-size:18px;margin:0;font-weight:700;}
+  header .gen{color:var(--sub);font-size:12px;}
+  .layout{display:flex;min-height:calc(100vh - 65px);}
+  .sidebar{width:200px;border-right:1px solid var(--line);padding:12px;overflow:auto;flex-shrink:0;}
+  .sidebar h2{font-size:11px;color:var(--sub);text-transform:uppercase;
+    letter-spacing:.05em;margin:4px 8px 10px;}
+  .dayhead{font-size:12px;color:var(--text);font-weight:700;margin:12px 8px 4px;
+    border-bottom:1px solid var(--line);padding-bottom:4px;}
+  .day{display:block;width:100%;text-align:left;background:none;border:none;
+    color:var(--text);padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;
+    margin-bottom:2px;}
+  .day:hover{background:#1f2630;}
+  .day.active{background:#1f6feb33;color:#79c0ff;font-weight:700;}
+  .day .badge{float:right;font-size:11px;color:var(--sub);}
+  main{flex:1;padding:24px;overflow:auto;}
+  .summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:10px 16px;min-width:90px;}
+  .chip .n{font-size:22px;font-weight:800;}
+  .chip .l{font-size:11px;color:var(--sub);margin-top:2px;}
+  .chip.red .n{color:var(--red);} .chip.yellow .n{color:var(--yellow);}
+  .chip.attn .n{color:#ff9f0a;}
+  section.block{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin-bottom:16px;}
+  section.block h3{margin:0 0 12px;font-size:14px;display:flex;align-items:center;gap:8px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{color:var(--sub);font-weight:600;font-size:11px;}
+  tr:last-child td{border-bottom:none;}
+  .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;}
+  .pill.zetsu{background:#ff3b3033;color:#ff6a60;}
+  .pill.ran{background:#ffcc0022;color:#ffd60a;}
+  .prog{color:var(--sub);}
+  .none{color:var(--sub);font-size:13px;padding:4px 2px;}
+  .rec li{margin-bottom:8px;line-height:1.5;}
+  .red-text{color:var(--red);} .yellow-text{color:var(--yellow);}
+  .empty{color:var(--sub);text-align:center;margin-top:80px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗂 shinchoku2026 朝のタスクレポート</h1>
+  <span class="gen" id="genat"></span>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <h2>振り返り（過去の朝）</h2>
+    <div id="daylist"></div>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<script src="reports-data.js"></script>
+<script>
+const R = (window.SHINCHOKU_REPORTS || []);
+const wd = ['日','月','火','水','木','金','土'];
+function fmtDate(s){const d=new Date(s+'T00:00:00');return `${d.getMonth()+1}/${d.getDate()}(${wd[d.getDay()]})`;}
+function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+function rowsTable(items, kind){
+  if(!items || !items.length) return `<div class="none">なし</div>`;
+  const rows = items.map(it=>{
+    let when='';
+    if(kind==='over') when=`<span class="red-text">${esc(it.deadline)}（${-it.days}日超過）</span>`;
+    else if(kind==='today') when=`<span class="yellow-text">本日</span>`;
+    else if(kind==='soon') when=`${esc(it.deadline)}（あと${it.days}日）`;
+    else if(kind==='attn'){
+      const cls=it.cat==='絶'?'zetsu':'ran';
+      when=`<span class="pill ${cls}">${it.cat}</span> ${esc(it.deadline)}（あと${it.days}日）`;
+    }
+    return `<tr><td>${when}</td><td>${esc(it.title)}</td>`+
+           `<td class="prog">${it.progress}%</td><td class="prog">${esc(it.requester)||'—'}</td></tr>`;
+  }).join('');
+  return `<table><thead><tr><th>期限</th><th>タスク</th><th>進捗</th><th>依頼</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function render(rep){
+  const m = document.getElementById('main');
+  document.getElementById('genat').textContent =
+    `${fmtDate(rep.date)} ${rep.time||''} 生成 / 全${rep.stats.total}件・未完了${rep.stats.active}件`;
+  m.innerHTML = `
+    <div class="summary">
+      <div class="chip red"><div class="n">${rep.over.length}</div><div class="l">🔴 期限超過</div></div>
+      <div class="chip yellow"><div class="n">${rep.today.length}</div><div class="l">🟡 本日期限</div></div>
+      <div class="chip"><div class="n">${rep.soon.length}</div><div class="l">🟢 直近3日</div></div>
+      <div class="chip attn"><div class="n">${rep.attn.length}</div><div class="l">⚠️ 注意分類</div></div>
+    </div>
+    <section class="block"><h3>👉 本日の推奨着手</h3>
+      <ol class="rec">${rep.recommend.length?rep.recommend.map(r=>`<li>${esc(r.title)} <span class="prog">[${r.progress}%]${r.days<0?` ・${-r.days}日超過`:(r.days===0?' ・本日期限':'')}</span></li>`).join(''):'<div class="none">なし</div>'}</ol>
+    </section>
+    <section class="block"><h3>🔴 期限超過（遅延）</h3>${rowsTable(rep.over,'over')}</section>
+    <section class="block"><h3>🟡 本日期限</h3>${rowsTable(rep.today,'today')}</section>
+    <section class="block"><h3>🟢 直近3日以内</h3>${rowsTable(rep.soon,'soon')}</section>
+    <section class="block"><h3>⚠️ 注意分類（絶/乱）</h3>${rowsTable(rep.attn,'attn')}</section>
+  `;
+}
+
+function keyOf(r){return r.id || (r.date+' '+(r.time||'00:00'));}
+function buildList(activeKey){
+  const list = document.getElementById('daylist');
+  let html='', lastDate=null;
+  R.forEach(r=>{
+    if(r.date!==lastDate){ html+=`<div class="dayhead">${fmtDate(r.date)}</div>`; lastDate=r.date; }
+    const k=keyOf(r);
+    const cls = k===activeKey?'day active':'day';
+    html+=`<button class="${cls}" data-k="${k}">🕘 ${r.time||'--:--'}<span class="badge">${r.over.length+r.today.length}</span></button>`;
+  });
+  list.innerHTML = html;
+  list.querySelectorAll('.day').forEach(b=>b.onclick=()=>{
+    const rep = R.find(x=>keyOf(x)===b.dataset.k);
+    render(rep); buildList(b.dataset.k);
+  });
+}
+
+if(!R.length){
+  document.getElementById('main').innerHTML='<div class="empty">レポートがまだありません。generate.py を実行してください。</div>';
+}else{
+  render(R[0]); buildList(keyOf(R[0]));
+}
+</script>
+</body>
+</html>
