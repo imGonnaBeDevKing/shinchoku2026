@@ -56,6 +56,22 @@
   .prog{color:var(--sub);}
   .none{color:var(--sub);font-size:13px;padding:4px 2px;}
   .rec li{margin-bottom:8px;line-height:1.5;}
+  .ai-block{border-color:#1f6feb55;}
+  .ai-lead{margin:0 0 14px;font-size:12px;color:var(--sub);line-height:1.5;}
+  .ai-card{background:#0d1117;border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;margin-bottom:12px;}
+  .ai-card:last-child{margin-bottom:0;}
+  .ai-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    margin-bottom:8px;flex-wrap:wrap;}
+  .ai-task{font-weight:700;font-size:13px;}
+  .ai-meta{font-size:11px;color:var(--sub);white-space:nowrap;}
+  .ai-prompt{font-size:13px;line-height:1.6;color:#c9d1d9;background:#161b22;
+    border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px;
+    white-space:pre-wrap;}
+  .ai-copy{background:#1f6feb;color:#fff;border:none;border-radius:8px;padding:8px 14px;
+    font-size:12px;font-weight:700;cursor:pointer;}
+  .ai-copy:hover{background:#388bfd;}
+  .ai-copy.done{background:var(--green);}
   .red-text{color:var(--red);} .yellow-text{color:var(--yellow);}
   .empty{color:var(--sub);text-align:center;margin-top:80px;}
 </style>
@@ -118,11 +134,46 @@ function render(rep){
     <section class="block"><h3>👉 本日の推奨着手</h3>
       <ol class="rec">${rep.recommend.length?rep.recommend.map(r=>`<li>${esc(r.title)} <span class="prog">[${r.progress}%]${r.days<0?` ・${-r.days}日超過`:(r.days===0?' ・本日期限':'')}</span></li>`).join(''):'<div class="none">なし</div>'}</ol>
     </section>
+    ${adviceBlock(rep)}
     <section class="block"><h3>🔴 期限超過（遅延）</h3>${rowsTable(rep.over,'over')}</section>
     <section class="block"><h3>🟡 本日期限</h3>${rowsTable(rep.today,'today')}</section>
     <section class="block"><h3>🟢 直近3日以内</h3>${rowsTable(rep.soon,'soon')}</section>
     <section class="block"><h3>⚠️ 注意分類（絶/乱）</h3>${rowsTable(rep.attn,'attn')}</section>
   `;
+  // コピーボタンの動作を付与
+  m.querySelectorAll('.ai-copy').forEach(btn=>btn.onclick=async()=>{
+    const text=btn.dataset.prompt; let ok=false;
+    try{ if(navigator.clipboard&&window.isSecureContext){ await navigator.clipboard.writeText(text); ok=true; } }catch(e){}
+    if(!ok){ // file:// 等のフォールバック
+      try{ const ta=document.createElement('textarea'); ta.value=text;
+        ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+        ta.select(); ok=document.execCommand('copy'); document.body.removeChild(ta);
+      }catch(e){}
+    }
+    const o='📋 このままコピーしてAIに聞く';
+    btn.textContent= ok ? '✅ コピーしました' : '⚠️ 手動でコピーしてください';
+    btn.classList.toggle('done', ok);
+    setTimeout(()=>{btn.textContent=o; btn.classList.remove('done');},1800);
+  });
+}
+
+function adviceBlock(rep){
+  // 期限超過→本日期限の順に、止まっているタスクのAI相談プロンプトを提案
+  const items = (rep.over||[]).concat(rep.today||[]).filter(x=>x.aiPrompt);
+  if(!items.length) return '';
+  const cards = items.map(it=>{
+    const tag = it.days<0 ? `<span class="red-text">${-it.days}日超過</span>` : `<span class="yellow-text">本日期限</span>`;
+    return `<div class="ai-card">
+      <div class="ai-card-head"><span class="ai-task">${esc(it.title)}</span> <span class="ai-meta">${tag}・進捗${it.progress}%</span></div>
+      <div class="ai-prompt">${esc(it.aiPrompt)}</div>
+      <button class="ai-copy" data-prompt="${esc(it.aiPrompt)}">📋 このままコピーしてAIに聞く</button>
+    </div>`;
+  }).join('');
+  return `<section class="block ai-block">
+    <h3>💡 AIアドバイス：詰まったらコピーして相談</h3>
+    <p class="ai-lead">期限が来ている/過ぎているタスクごとに、そのままAIに貼れる質問文を用意しました。コピーして送れば、AIが続きを進めてくれます。</p>
+    ${cards}
+  </section>`;
 }
 
 function keyOf(r){return r.id || (r.date+' '+(r.time||'00:00'));}
