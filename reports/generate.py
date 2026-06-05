@@ -13,6 +13,8 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_JS = os.path.join(HERE, "reports-data.js")
+PENDING = os.path.join(HERE, "_pending.json")      # AI分析待ち（generate.py が出力 → Claude が読む）
+AI_ADVICE = os.path.join(HERE, "ai-advice.json")   # Claude が書く → --apply で取り込む
 
 API_KEY = "AIzaSyC1cVgoBleKcvXU3Z1G0FNY8JlL72pNP-c"
 PROJECT = "kikakugyoumu-907d6"
@@ -196,36 +198,109 @@ def load_existing():
         return []
 
 
+def write_data(reports):
+    body = json.dumps(reports, ensure_ascii=False, indent=2)
+    with open(DATA_JS, "w", encoding="utf-8") as f:
+        f.write("window.SHINCHOKU_REPORTS = " + body + ";\n")
+
+
+def load_reports():
+    out = []
+    for r in load_existing():
+        if "id" not in r:
+            r["id"] = r.get("date", "") + " " + r.get("time", "00:00")
+        out.append(r)
+    return out
+
+
+def write_pending(report):
+    """Claude が読むAI分析待ちファイル。止まっているタスクを渡す。"""
+    stuck = []
+    seen = set()
+    for it in report["over"] + report["today"] + report["attn"]:
+        if it["title"] in seen:
+            continue
+        seen.add(it["title"])
+        state = ("期限超過" if it["days"] < 0 else
+                 "本日期限" if it["days"] == 0 else f"あと{it['days']}日")
+        stuck.append({
+            "title": it["title"], "deadline": it["deadline"],
+            "days": it["days"], "state": state,
+            "progress": it["progress"], "requester": it.get("requester", ""),
+        })
+    payload = {
+        "id": report["id"], "date": report["date"], "time": report["time"],
+        "stats": report["stats"],
+        "counts": {"over": len(report["over"]), "today": len(report["today"]),
+                   "soon": len(report["soon"]), "attn": len(report["attn"])},
+        "done": report.get("done", []), "added": report.get("added", []),
+        "stuck_tasks": stuck,
+    }
+    with open(PENDING, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+
+def apply_ai():
+    """Claude が書いた ai-advice.json を reports-data.js に取り込む。"""
+    if not os.path.exists(AI_ADVICE):
+        print("[apply] ai-advice.json が無いためスキップ")
+        return
+    advice = json.load(open(AI_ADVICE, encoding="utf-8"))
+    target_id = advice.get("id")
+    by_title = {t["title"]: t for t in advice.get("tasks", [])}
+    reports = load_reports()
+    hit = False
+    for rep in reports:
+        if rep.get("id") != target_id:
+            continue
+        hit = True
+        if advice.get("briefing"):
+            rep["aiBriefing"] = advice["briefing"]
+        for key in ("over", "today", "attn"):
+            for it in rep.get(key, []):
+                t = by_title.get(it["title"])
+                if not t:
+                    continue
+                if t.get("insight"):
+                    it["aiInsight"] = t["insight"]
+                if t.get("prompt"):
+                    it["aiPrompt"] = t["prompt"]
+    if hit:
+        write_data(reports)
+        print(f"[apply] AI分析を取り込みました id={target_id} "
+              f"tasks={len(by_title)} briefing={'有' if advice.get('briefing') else '無'}")
+    else:
+        print(f"[apply] id={target_id} に一致する記録が見つかりません")
+
+
 def main():
     today = datetime.date.today()
     rows = fetch_tasks()
     report = build_report(rows, today)
 
     # 時刻ごとに別エントリとして残す（同一分の再実行のみ上書き）。
-    # 旧データ（idなし＝日付単位）も id を補完して取り込む。
-    existing = []
-    for r in load_existing():
-        if "id" not in r:
-            r["id"] = r.get("date", "") + " " + r.get("time", "00:00")
-        existing.append(r)
+    existing = load_reports()
     others = [r for r in existing if r.get("id") != report["id"]]
-    # 直近（自分より過去で最大のid）を前回として比較
     past = sorted((r for r in others if r.get("id", "") < report["id"]),
                   key=lambda x: x["id"], reverse=True)
     make_message(report, past[0] if past else None)
     reports = others + [report]
     reports.sort(key=lambda x: x["id"], reverse=True)
 
-    body = json.dumps(reports, ensure_ascii=False, indent=2)
-    with open(DATA_JS, "w", encoding="utf-8") as f:
-        f.write("window.SHINCHOKU_REPORTS = " + body + ";\n")
+    write_data(reports)
+    write_pending(report)
     print(f"[ok] {report['id']} : active={report['stats']['active']} "
           f"over={len(report['over'])} today={len(report['today'])} "
           f"attn={len(report['attn'])} done={len(report.get('done',[]))} "
           f"added={len(report.get('added',[]))} mood={report.get('mood')} "
           f"/ 蓄積 {len(reports)}件")
     print(f"     msg: {report.get('message','')}")
+    print(f"     pending: {PENDING}（このファイルのstuck_tasksを読んでAI分析→{AI_ADVICE}に書く）")
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--apply" in sys.argv:
+        apply_ai()
+    else:
+        main()

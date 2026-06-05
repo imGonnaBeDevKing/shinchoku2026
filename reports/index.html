@@ -56,6 +56,15 @@
   .prog{color:var(--sub);}
   .none{color:var(--sub);font-size:13px;padding:4px 2px;}
   .rec li{margin-bottom:8px;line-height:1.5;}
+  .ai-brief{background:linear-gradient(135deg,#1f6feb22,#a371f722);
+    border:1px solid #a371f766;border-radius:12px;padding:16px 18px;margin-bottom:18px;}
+  .ai-brief-head{font-size:13px;font-weight:800;color:#d2a8ff;margin-bottom:8px;
+    display:flex;align-items:center;gap:8px;}
+  .ai-brief-model{font-size:10px;font-weight:700;color:#fff;background:#a371f7;
+    border-radius:999px;padding:2px 8px;}
+  .ai-brief-body{font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;}
+  .ai-insight{font-size:13px;line-height:1.6;color:#d2a8ff;background:#a371f714;
+    border-left:3px solid #a371f7;border-radius:6px;padding:8px 12px;margin-bottom:10px;}
   .ai-block{border-color:#1f6feb55;}
   .ai-lead{margin:0 0 14px;font-size:12px;color:var(--sub);line-height:1.5;}
   .ai-card{background:#0d1117;border:1px solid var(--line);border-radius:10px;
@@ -123,8 +132,12 @@ function render(rep){
   const msgHTML = rep.message
     ? `<div class="msgbar ${mood}">${esc(rep.message)}${det.length?`<span class="detail">${det.join('　')}</span>`:''}</div>`
     : '';
+  const briefHTML = rep.aiBriefing
+    ? `<section class="ai-brief"><div class="ai-brief-head">🤖 AIブリーフィング <span class="ai-brief-model">Opus 4.8</span></div><div class="ai-brief-body">${esc(rep.aiBriefing)}</div></section>`
+    : '';
   m.innerHTML = `
     ${msgHTML}
+    ${briefHTML}
     <div class="summary">
       <div class="chip red"><div class="n">${rep.over.length}</div><div class="l">🔴 期限超過</div></div>
       <div class="chip yellow"><div class="n">${rep.today.length}</div><div class="l">🟡 本日期限</div></div>
@@ -163,8 +176,11 @@ function adviceBlock(rep){
   if(!items.length) return '';
   const cards = items.map(it=>{
     const tag = it.days<0 ? `<span class="red-text">${-it.days}日超過</span>` : `<span class="yellow-text">本日期限</span>`;
+    const insight = it.aiInsight
+      ? `<div class="ai-insight">🤖 ${esc(it.aiInsight)}</div>` : '';
     return `<div class="ai-card">
       <div class="ai-card-head"><span class="ai-task">${esc(it.title)}</span> <span class="ai-meta">${tag}・進捗${it.progress}%</span></div>
+      ${insight}
       <div class="ai-prompt">${esc(it.aiPrompt)}</div>
       <button class="ai-copy" data-prompt="${esc(it.aiPrompt)}">📋 このままコピーしてAIに聞く</button>
     </div>`;
