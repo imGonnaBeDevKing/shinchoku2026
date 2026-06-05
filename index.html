@@ -2248,8 +2248,8 @@
     }
     .dash-col--left  { grid-column: 1; grid-row: 1; }
     .dash-col--right { grid-column: 2; grid-row: 1; }
-    .requests-panel  { grid-column: 1 / -1; grid-row: 2; }
-    .week-panel      { grid-column: 1 / -1; grid-row: 3; }
+    .week-panel      { grid-column: 1 / -1; grid-row: 2; }
+    .requests-panel  { grid-column: 1 / -1; grid-row: 3; }
     .main-highlights { margin-bottom: 0; }
 
     /* ステータスサマリーカード（緊急/注意/順調/期限なし） */
@@ -3375,7 +3375,22 @@
         </aside>
       </div>
 
-      <!-- すべての依頼（依頼確認カード） -->
+      <!-- 週のタスクメモカード（上に配置・スクショAI報告書化用） -->
+      <section class="week-panel" id="weekPanel" aria-label="週のタスクメモ">
+        <div class="week-panel-header">
+          <h3 class="week-panel-title">週のタスクメモ</h3>
+          <span class="week-panel-range" id="weekPanelRange">--</span>
+          <div class="week-panel-nav">
+            <button type="button" class="week-weekend-toggle" id="weekWeekendToggle" aria-pressed="false" title="土日の表示切替">土日</button>
+            <button type="button" class="week-nav-btn" id="weekNavPrev" aria-label="前の週">← 前週</button>
+            <button type="button" class="week-nav-btn" id="weekNavToday" title="今週に戻る">今週</button>
+            <button type="button" class="week-nav-btn" id="weekNavNext" aria-label="次の週">次週 →</button>
+          </div>
+        </div>
+        <div class="week-grid" id="weekGrid"></div>
+      </section>
+
+      <!-- すべての依頼（依頼確認カード・下に配置） -->
       <section class="requests-panel" id="requestsPanel" aria-label="すべての依頼">
         <div class="requests-panel-header">
           <div class="requests-panel-title-wrap">
@@ -3393,21 +3408,6 @@
           </div>
         </div>
         <div class="requests-list" id="requestsList"></div>
-      </section>
-
-      <!-- PC版: 週のタスクメモカード（スクショAI報告書化用） -->
-      <section class="week-panel" id="weekPanel" aria-label="週のタスクメモ">
-        <div class="week-panel-header">
-          <h3 class="week-panel-title">週のタスクメモ</h3>
-          <span class="week-panel-range" id="weekPanelRange">--</span>
-          <div class="week-panel-nav">
-            <button type="button" class="week-weekend-toggle" id="weekWeekendToggle" aria-pressed="false" title="土日の表示切替">土日</button>
-            <button type="button" class="week-nav-btn" id="weekNavPrev" aria-label="前の週">← 前週</button>
-            <button type="button" class="week-nav-btn" id="weekNavToday" title="今週に戻る">今週</button>
-            <button type="button" class="week-nav-btn" id="weekNavNext" aria-label="次の週">次週 →</button>
-          </div>
-        </div>
-        <div class="week-grid" id="weekGrid"></div>
       </section>
     </div>
   </main>
