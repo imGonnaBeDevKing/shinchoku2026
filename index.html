@@ -931,11 +931,15 @@
         flex-shrink: 0;
       }
 
+      /* 閲覧モード: 1行目=残り日数+期限 / 2行目=タイトル全文(折返し) */
       .task-card.is-view-only .task-header {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         width: 100%;
         max-width: 100%;
         min-width: 0;
+        column-gap: var(--space-sm);
+        row-gap: 6px;
+        align-items: center;
       }
 
       .task-card.is-view-only .task-header::after {
@@ -950,28 +954,30 @@
       .task-card.is-view-only .task-deadline {
         order: 2;
         flex: 0 0 auto;
-        margin-left: 0;
+        margin-left: auto;
       }
 
+      /* タイトルは丸ごと次の行へ流し、最大2行で折り返して全文表示 */
       .task-card.is-view-only .task-title-scroller {
         order: 3;
-        flex: 1 1 0;
-        width: 0;
+        flex: 1 1 100%;
+        width: 100%;
         min-width: 0;
-        overflow-x: auto;
-        overflow-y: hidden;
-        white-space: nowrap;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
-        touch-action: pan-x;
-        scrollbar-width: thin;
+        overflow: visible;
+        white-space: normal;
       }
 
       .task-card.is-view-only .task-title-scroller .task-title {
-        display: inline-block;
-        min-width: max-content;
-        max-width: none;
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.45;
+        font-weight: 600;
+        max-width: 100%;
       }
 
       .department-header {
@@ -1464,40 +1470,51 @@
     }
 
     .task-card.is-view-only .task-header {
-      flex-wrap: nowrap;
-      gap: 8px;
+      flex-wrap: wrap;
+      column-gap: 8px;
+      row-gap: 6px;
       width: 100%;
       max-width: 100%;
       min-width: 0;
+      align-items: center;
     }
 
     .task-card.is-view-only .task-header::after {
       content: none;
     }
 
-    .task-card.is-view-only .task-remaining,
-    .task-card.is-view-only .task-deadline {
+    .task-card.is-view-only .task-remaining {
       flex: 0 0 auto;
+      order: 1;
     }
 
+    .task-card.is-view-only .task-deadline {
+      flex: 0 0 auto;
+      order: 2;
+      margin-left: auto;
+    }
+
+    /* タイトルは次の行へ流して最大2行で全文表示（横スクロール廃止） */
     .task-card.is-view-only .task-title-scroller {
-      flex: 1 1 0;
-      width: 0;
+      order: 3;
+      flex: 1 1 100%;
+      width: 100%;
       min-width: 0;
-      overflow-x: auto;
-      overflow-y: hidden;
-      white-space: nowrap;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior-x: contain;
-      touch-action: pan-x;
-      scrollbar-width: thin;
+      overflow: visible;
+      white-space: normal;
     }
 
     .task-card.is-view-only .task-title-scroller .task-title {
-      display: inline-block;
-      min-width: max-content;
-      max-width: none;
-      white-space: nowrap;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.45;
+      font-weight: 600;
+      max-width: 100%;
     }
 
     .task-deadline-field {
@@ -2874,6 +2891,184 @@
   /* スマホでは週カード非表示 */
   @media (max-width: 1023px) {
     .week-panel { display: none; }
+  }
+
+  /* ===================================================
+     依頼カード スマホ専用レイアウト
+     （PCのリッチCSSは min-width:1024px 内にあり
+      スマホには適用されないため、ここで独立に定義）
+  =================================================== */
+  @media (max-width: 1023px) {
+    .requests-list { display: flex; flex-direction: column; gap: 12px; }
+    .request-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 16px rgba(16,24,40,.05);
+    }
+    .request-drag-handle { display: none; }
+
+    /* ヘッダー: タイトル → メタ → 依頼者/ボール を縦に */
+    .request-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      width: 100%;
+      min-width: 0;
+    }
+    .request-status-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
+    .request-status-dot.red { background: #FF3B30; }
+    .request-status-dot.orange { background: #FF9500; }
+    .request-status-dot.green { background: #34C759; }
+    .request-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.35;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .request-stale-badge {
+      flex: 0 0 auto;
+      display: inline-flex; align-items: center; gap: 2px;
+      font-size: 10px; color: #B8860B;
+      background: #FFF8E1; border: 1px solid #FFE082;
+      padding: 2px 6px; border-radius: 999px;
+    }
+    .request-header-spacer { display: none; }
+    .request-header-meta {
+      flex: 1 1 100%;
+      display: flex; flex-wrap: wrap; gap: 6px 14px;
+      font-size: 12px; color: var(--text-secondary);
+    }
+    .request-header-meta strong { color: var(--text-primary); font-weight: 700; }
+    .request-header-requester {
+      flex: 1 1 100%;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-secondary);
+    }
+    .request-header-requester select,
+    .request-requester-select {
+      flex: 1 1 auto;
+      min-height: 36px;
+      font-size: 13px;
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 9px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+    .request-ball {
+      flex: 0 0 auto;
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 999px;
+      background: var(--bg-secondary); color: var(--text-primary);
+    }
+    .request-ball-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    /* フェーズ: 6ステップを横一列・均等配置（横スクロールなし） */
+    .request-phases {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0;
+      width: 100%;
+      padding: 4px 0 2px;
+    }
+    .request-phase-step {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+    .request-phase-circle {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 2px solid var(--border-color); background: var(--bg-primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: var(--border-color);
+      flex: 0 0 auto;
+    }
+    .request-phase-step.done .request-phase-circle { background: #34C759; border-color: #34C759; color: #fff; }
+    .request-phase-step.done .request-phase-circle::after { content: '✓'; }
+    .request-phase-step.active .request-phase-circle { background: #007AFF; border-color: #007AFF; }
+    .request-phase-step.active .request-phase-circle::after { content: ''; width: 6px; height: 6px; background: #fff; border-radius: 50%; }
+    .request-phase-label {
+      font-size: 9px;
+      line-height: 1.2;
+      text-align: center;
+      color: var(--text-secondary);
+      word-break: break-word;
+    }
+    .request-phase-step.done .request-phase-label,
+    .request-phase-step.active .request-phase-label { color: var(--text-primary); font-weight: 700; }
+    .request-phase-connector {
+      flex: 1 1 auto;
+      height: 2px;
+      background: var(--border-color);
+      margin-top: 9px;
+      min-width: 4px;
+    }
+    .request-phase-connector.done { background: #34C759; }
+
+    /* メモ */
+    .request-memo-wrap { width: 100%; max-width: 100%; }
+    .request-memo {
+      background: var(--bg-secondary);
+      border: 1px solid transparent;
+      border-radius: 9px;
+      padding: 8px 12px;
+      font-size: 13px; line-height: 1.5;
+      color: var(--text-primary);
+      min-height: 36px;
+      word-break: break-word;
+    }
+    .request-memo:empty::before { content: '📝 （クリックしてメモを入力）'; color: var(--text-secondary); }
+    .request-memo.is-placeholder { color: var(--text-secondary); }
+
+    /* 下段: 最終更新 / 履歴 / 削除 */
+    .request-right {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: 8px 12px;
+      width: 100%;
+      padding-top: 2px;
+      border-top: 1px solid var(--border-color);
+    }
+    .request-updated { font-size: 11px; color: var(--text-secondary); }
+    .request-updated strong { color: var(--text-primary); }
+    .request-history-btn {
+      margin-left: auto;
+      font-size: 12px;
+      padding: 7px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 9px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .request-delete-btn {
+      font-size: 12px;
+      padding: 7px 12px;
+      border: 1px solid #FFD5D2;
+      border-radius: 9px;
+      background: #fff; color: #FF3B30;
+      cursor: pointer;
+    }
   }
   #fcCalendar .fc-toolbar-title,
   #fcCalendarInline .fc-toolbar-title {
