@@ -7970,7 +7970,15 @@
     // 依頼確認カード（実タスク連動 + 依頼者プルダウン）
     // データ源は global tasks（緊急/注意/順調/期限なしと同一）
     // ===================================================
-    const REQUEST_USERS = ['本人', '部長', '社長様', '目黒さん', '島村さん', '奥田さん', '船木さん', '企画部'];
+    const REQUEST_USERS = ['本人', '部長', '社長様', '企画部M様', '営業部S様', '営業部O様', 'サポート部F様', '企画部'];
+    // 実名を匿名表記へ変換（AIへ実名を渡さないための正規化）
+    const REQUESTER_ALIAS = {
+      '目黒さん': '企画部M様', '目黒': '企画部M様',
+      '島村さん': '営業部S様', '島村': '営業部S様',
+      '奥田さん': '営業部O様', '奥田': '営業部O様',
+      '船木さん': 'サポート部F様', '船木': 'サポート部F様',
+    };
+    const normReq = v => (v == null ? v : (REQUESTER_ALIAS[v] || v));
     const REQUEST_PHASES = ['依頼', '着手', '進行中', '叩き台提出', '修正中', '承認待ち'];
 
     function deriveRequestPhase(task) {
@@ -8028,8 +8036,23 @@
       if (phase === 5) return { key: 'boss', label: '上司ボール (承認待ち)' };
       return { key: 'self', label: '塩崎ボール' };
     }
+    let _requesterMigrated = false;
+    function migrateRequesterNames(src) {
+      // 旧実名が残っているタスクを匿名表記へ永続移行（ログイン時のみ・一度だけ）
+      if (_requesterMigrated || !currentUser || typeof updateTask !== 'function') return;
+      const targets = src.filter(t => t && REQUESTER_ALIAS[t.requester]);
+      if (!targets.length) { _requesterMigrated = true; return; }
+      _requesterMigrated = true;
+      targets.forEach(t => {
+        const next = REQUESTER_ALIAS[t.requester];
+        t.requester = next; // ローカルも即時反映
+        updateTask(t.id, { requester: next, updatedAt: new Date().toISOString() })
+          .catch(e => console.warn('requester migrate failed', t.id, e));
+      });
+    }
     function buildRequestsFromTasks() {
       const src = Array.isArray(tasks) ? tasks : [];
+      migrateRequesterNames(src);
       // 完了済み(task.completed=true)のみ除外。承認待ちまでは削除されるまで表示
       const active = src.filter(t => {
         if (typeof toBool === 'function' && toBool(t.completed)) return false;
@@ -8045,7 +8068,7 @@
         return {
           id: t.id,
           title: t.title || '(無題)',
-          requester: t.requester || '塩崎',
+          requester: normReq(t.requester) || '塩崎',
           requestDate: fmtRequestMD(t.createdAt),
           deadline: t.deadline ? fmtRequestMD(t.deadline) : '期限なし',
           progress: Number(t.progress) || 0,
@@ -8282,8 +8305,9 @@
 
     function renderRequestCard(r) {
       const canEdit = !!currentUser; // ログイン時のみ編集可
+      const reqVal = normReq(r.requester);
       const userOptions = REQUEST_USERS.map(u =>
-        `<option value="${u}"${u === r.requester ? ' selected' : ''}>${u}</option>`
+        `<option value="${u}"${u === reqVal ? ' selected' : ''}>${u}</option>`
       ).join('');
       const phases = REQUEST_PHASES.map((label, idx) => {
         const state = idx < r.phase ? 'done' : (idx === r.phase ? 'active' : '');

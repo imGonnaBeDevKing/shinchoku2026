@@ -40,9 +40,22 @@ def fetch_tasks():
             "deadline": g("deadline"),
             "progress": int(g("progress") or 0),
             "completed": g("completed") is True,
-            "requester": g("requester"),
+            "requester": anon_requester(g("requester")),
         })
     return rows
+
+
+# 実名をAIへ渡さないための匿名化（Firestoreに旧名が残っていても保険として変換）
+REQUESTER_ALIAS = {
+    "目黒さん": "企画部M様", "目黒": "企画部M様",
+    "島村さん": "営業部S様", "島村": "営業部S様",
+    "奥田さん": "営業部O様", "奥田": "営業部O様",
+    "船木さん": "サポート部F様", "船木": "サポート部F様",
+}
+
+
+def anon_requester(v):
+    return REQUESTER_ALIAS.get(v, v)
 
 
 def pdate(s):
