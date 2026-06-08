@@ -49,6 +49,15 @@
   .hero .ring2{position:absolute;right:60px;bottom:-70px;width:160px;height:160px;border-radius:50%;
     background:rgba(255,255,255,.08);}
 
+  /* praise message bar */
+  .msgbar{border-radius:16px;padding:14px 18px;margin-bottom:18px;font-size:15px;
+    font-weight:800;line-height:1.5;border:1px solid var(--line);box-shadow:var(--shadow);}
+  .msgbar.praise{background:var(--greenbg);border-color:#3fb95066;color:var(--green);}
+  .msgbar.cheer{background:var(--bluebg);border-color:#1f6feb55;color:var(--blue);}
+  .msgbar.mixed{background:var(--amberbg);border-color:#f5a62366;color:#b9770a;}
+  .msgbar.neutral{background:var(--card);color:var(--sub);font-weight:700;}
+  .msgbar .detail{display:block;font-size:12px;font-weight:600;margin-top:7px;color:var(--sub);}
+
   /* KPI */
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
   @media(max-width:780px){.kpis{grid-template-columns:repeat(2,1fr);}}
@@ -157,6 +166,15 @@ function whenLabel(it){
   if(it.days<0) return `${-it.days}日超過`;
   if(it.days===0) return '本日期限';
   return `あと${it.days}日`;
+}
+
+function msgBar(rep){
+  if(!rep.message) return '';
+  const mood=rep.mood||'neutral';
+  const det=[];
+  if(rep.done&&rep.done.length) det.push('✅ 片づいた: '+rep.done.map(esc).join(' / '));
+  if(rep.added&&rep.added.length) det.push('➕ 増えた: '+rep.added.map(esc).join(' / '));
+  return `<div class="msgbar ${mood}">${esc(rep.message)}${det.length?`<span class="detail">${det.join('　')}</span>`:''}</div>`;
 }
 
 function heroFor(rep){
@@ -281,6 +299,7 @@ function render(){
   document.getElementById('genat').textContent=
     `${fmtDate(rep.date)} ${rep.time||''} 時点 ・ 未完了 ${rep.stats.active}件 / 全${rep.stats.total}件`;
   document.getElementById('app').innerHTML=`
+    ${msgBar(rep)}
     ${heroFor(rep)}
     ${kpis(rep,prev)}
     <div class="grid2">
