@@ -3291,6 +3291,16 @@
       padding-top: 44px;
     }
 
+    /* 固定ヘッダー(z-index:9999)より前面にモーダルを出す。
+       これがないと全画面モーダルの上端がページナビに隠れる */
+    .hoshitori-modal,
+    .worklog-modal,
+    .login-modal,
+    .modal-overlay,
+    #dashboardModal {
+      z-index: 10000 !important;
+    }
+
     .department-title {
       font-size: 15px !important;
       font-weight: 400 !important;
