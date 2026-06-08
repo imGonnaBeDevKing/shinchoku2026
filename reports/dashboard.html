@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>進捗ダッシュボード — shinchoku2026</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#0b1220; --sub:#5b6573; --line:#e7eaee;
+    --red:#e5484d; --redbg:#fdecec; --amber:#f5a623; --amberbg:#fef6e7;
+    --green:#2f9e44; --greenbg:#e9f7ee; --blue:#2563eb; --bluebg:#eaf0fe;
+    --violet:#7c5cff; --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.06);
+    --radius:18px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0e14; --card:#141a23; --ink:#eef2f7; --sub:#94a0b0; --line:#222b38;
+      --redbg:#2a1416; --amberbg:#2a2010; --greenbg:#10241a; --bluebg:#111d34;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.45);
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    flex-wrap:wrap;margin-bottom:22px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .logo{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#7c5cff,#2563eb);color:#fff;font-size:20px;box-shadow:var(--shadow);}
+  .brand h1{font-size:18px;margin:0;font-weight:800;letter-spacing:-.01em;}
+  .brand .gen{font-size:12px;color:var(--sub);margin-top:2px;}
+  .picker{display:flex;align-items:center;gap:8px;}
+  select{font:inherit;font-size:13px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);
+    background:var(--card);color:var(--ink);box-shadow:var(--shadow);cursor:pointer;}
+
+  /* HERO */
+  .hero{border-radius:24px;padding:26px 28px;margin-bottom:22px;color:#fff;position:relative;
+    overflow:hidden;box-shadow:var(--shadow);}
+  .hero.calm{background:linear-gradient(135deg,#2f9e44,#19944b);}
+  .hero.warn{background:linear-gradient(135deg,#f5a623,#ef7d1a);}
+  .hero.alert{background:linear-gradient(135deg,#e5484d,#c11574);}
+  .hero .face{font-size:13px;font-weight:700;opacity:.92;letter-spacing:.04em;}
+  .hero .headline{font-size:30px;font-weight:900;line-height:1.25;margin:8px 0 6px;letter-spacing:-.02em;}
+  .hero .sub{font-size:14px;opacity:.95;line-height:1.6;max-width:760px;}
+  .hero .ring{position:absolute;right:-40px;top:-40px;width:220px;height:220px;border-radius:50%;
+    background:rgba(255,255,255,.12);}
+  .hero .ring2{position:absolute;right:60px;bottom:-70px;width:160px;height:160px;border-radius:50%;
+    background:rgba(255,255,255,.08);}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  @media(max-width:780px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;box-shadow:var(--shadow);}
+  .kpi .k-top{display:flex;align-items:center;justify-content:space-between;}
+  .kpi .k-label{font-size:12px;color:var(--sub);font-weight:600;}
+  .kpi .k-dot{width:10px;height:10px;border-radius:50%;}
+  .kpi .k-num{font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1.1;margin-top:6px;}
+  .kpi .k-delta{font-size:12px;font-weight:700;margin-top:2px;display:inline-flex;align-items:center;gap:3px;}
+  .delta-up{color:var(--red);} .delta-down{color:var(--green);} .delta-flat{color:var(--sub);}
+  .dot-red{background:var(--red);} .dot-amber{background:var(--amber);}
+  .dot-green{background:var(--green);} .dot-blue{background:var(--blue);}
+
+  .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-bottom:22px;}
+  @media(max-width:880px){.grid2{grid-template-columns:1fr;}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;box-shadow:var(--shadow);}
+  .card h2{font-size:13px;margin:0 0 14px;color:var(--sub);font-weight:700;text-transform:uppercase;
+    letter-spacing:.06em;display:flex;align-items:center;gap:8px;}
+
+  /* NEXT ACTION */
+  .next{border:1px solid var(--line);border-left:5px solid var(--red);border-radius:14px;
+    padding:16px 18px;background:var(--redbg);}
+  .next.amber{border-left-color:var(--amber);background:var(--amberbg);}
+  .next.green{border-left-color:var(--green);background:var(--greenbg);}
+  .next .n-tag{font-size:11px;font-weight:800;color:var(--red);letter-spacing:.04em;}
+  .next.amber .n-tag{color:var(--amber);} .next.green .n-tag{color:var(--green);}
+  .next .n-title{font-size:18px;font-weight:800;margin:6px 0 4px;color:var(--ink);}
+  .next .n-meta{font-size:12px;color:var(--sub);}
+  .next .n-insight{font-size:13px;line-height:1.6;color:var(--ink);margin-top:10px;opacity:.85;}
+  .next .n-btn{margin-top:12px;background:var(--ink);color:var(--bg);border:none;border-radius:10px;
+    padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;}
+
+  /* TREND */
+  .trend-svg{width:100%;height:120px;display:block;}
+  .trend-legend{font-size:11px;color:var(--sub);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap;}
+  .trend-legend b{color:var(--ink);}
+
+  /* TASK ROWS */
+  .tasklist{display:flex;flex-direction:column;gap:10px;}
+  .trow{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--line);
+    border-radius:12px;background:var(--card);}
+  .trow .urg{width:6px;align-self:stretch;border-radius:6px;flex-shrink:0;}
+  .urg.red{background:var(--red);} .urg.amber{background:var(--amber);}
+  .urg.green{background:var(--green);} .urg.blue{background:var(--blue);}
+  .trow .t-main{flex:1;min-width:0;}
+  .trow .t-title{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .trow .t-meta{font-size:11px;color:var(--sub);margin-top:3px;}
+  .badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .b-red{background:var(--redbg);color:var(--red);} .b-amber{background:var(--amberbg);color:var(--amber);}
+  .b-green{background:var(--greenbg);color:var(--green);} .b-blue{background:var(--bluebg);color:var(--blue);}
+  .pbar{width:64px;height:6px;border-radius:6px;background:var(--line);overflow:hidden;flex-shrink:0;}
+  .pbar > i{display:block;height:100%;background:var(--blue);}
+  .seg-title{font-size:12px;font-weight:800;color:var(--sub);margin:18px 0 8px;display:flex;
+    align-items:center;gap:8px;}
+  .seg-title .cnt{background:var(--line);border-radius:999px;padding:1px 8px;font-size:11px;}
+  .empty-mini{font-size:13px;color:var(--sub);padding:8px 2px;}
+
+  /* AI briefing */
+  .brief{background:linear-gradient(135deg,var(--bluebg),rgba(124,92,255,.10));
+    border:1px solid var(--line);}
+  .brief h2{color:var(--violet);}
+  .brief .body{font-size:14px;line-height:1.8;white-space:pre-wrap;color:var(--ink);}
+  .brief .model{font-size:10px;font-weight:800;color:#fff;background:var(--violet);
+    border-radius:999px;padding:2px 8px;margin-left:auto;}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;font-size:13px;
+    font-weight:700;opacity:0;transition:.25s;box-shadow:var(--shadow);pointer-events:none;z-index:9;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  footer{text-align:center;color:var(--sub);font-size:11px;margin-top:30px;}
+  a.link{color:var(--blue);text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">📈</div>
+      <div>
+        <h1>進捗ダッシュボード</h1>
+        <div class="gen" id="genat"></div>
+      </div>
+    </div>
+    <div class="picker">
+      <span style="font-size:12px;color:var(--sub)">表示時点</span>
+      <select id="snap"></select>
+    </div>
+  </div>
+  <div id="app"></div>
+  <footer>shinchoku2026 ・ <a class="link" href="index.html">従来レポートを開く</a></footer>
+</div>
+<div class="toast" id="toast">コピーしました</div>
+
+<script>
+let R=[], IDX=0;
+const wd=['日','月','火','水','木','金','土'];
+const fmtDate=s=>{const d=new Date(s+'T00:00:00');return `${d.getMonth()+1}/${d.getDate()}(${wd[d.getDay()]})`;};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const keyOf=r=>r.id||(r.date+' '+(r.time||'00:00'));
+
+function urgClass(days){ if(days<0) return 'red'; if(days===0) return 'amber'; if(days<=3) return 'green'; return 'blue'; }
+function whenLabel(it){
+  if(it.days<0) return `${-it.days}日超過`;
+  if(it.days===0) return '本日期限';
+  return `あと${it.days}日`;
+}
+
+function heroFor(rep){
+  const over=rep.over.length, today=rep.today.length, soon=rep.soon.length;
+  let level, face, head, sub;
+  if(over>=5){
+    level='alert'; face='🔴 要対応';
+    head=`${over}件が期限を過ぎています`;
+    sub=`本日期限 ${today}件・直近3日 ${soon}件。まずは下の「今すぐやる1つ」から着手すれば、状況は確実に動きます。`;
+  }else if(over>0||today>0){
+    level='warn'; face='🟡 注意';
+    head= over>0?`${over}件が期限超過・${today}件が本日期限`:`本日期限が${today}件`;
+    sub=`残りは直近3日 ${soon}件。今日いくつか片づければ赤信号は消えます。`;
+  }else{
+    level='calm'; face='🟢 良好';
+    head=soon>0?`期限超過ゼロ。直近に${soon}件`:`すべて期限内。順調です`;
+    sub='急ぎの遅延はありません。先回りで直近タスクを進めましょう。';
+  }
+  return `<div class="hero ${level}"><div class="ring"></div><div class="ring2"></div>
+    <div class="face">${face}</div>
+    <div class="headline">${esc(head)}</div>
+    <div class="sub">${esc(sub)}</div></div>`;
+}
+
+function deltaHTML(cur,prev,goodWhenDown=true){
+  if(prev==null) return `<span class="k-delta delta-flat">— 前回比なし</span>`;
+  const d=cur-prev;
+  if(d===0) return `<span class="k-delta delta-flat">→ 前回と同じ</span>`;
+  const worse = goodWhenDown ? d>0 : d<0;
+  const cls = worse?'delta-up':'delta-down';
+  const arr = d>0?'▲':'▼';
+  return `<span class="k-delta ${cls}">${arr} ${Math.abs(d)} 前回比</span>`;
+}
+
+function kpis(rep, prev){
+  const items=[
+    {label:'期限超過',num:rep.over.length,dot:'dot-red',prev:prev&&prev.over.length},
+    {label:'本日期限',num:rep.today.length,dot:'dot-amber',prev:prev&&prev.today.length},
+    {label:'直近3日',num:rep.soon.length,dot:'dot-green',prev:prev&&prev.soon.length},
+    {label:'未完了 合計',num:rep.stats.active,dot:'dot-blue',prev:prev&&prev.stats.active},
+  ];
+  return `<div class="kpis">${items.map(k=>`
+    <div class="kpi"><div class="k-top"><span class="k-label">${k.label}</span>
+      <span class="k-dot ${k.dot}"></span></div>
+      <div class="k-num">${k.num}</div>
+      ${deltaHTML(k.num, k.prev==null?null:k.prev)}
+    </div>`).join('')}</div>`;
+}
+
+function nextAction(rep){
+  const cand=(rep.over||[]).concat(rep.today||[]).concat(rep.soon||[])
+    .sort((a,b)=>a.days-b.days)[0];
+  if(!cand) return `<div class="next green"><div class="n-tag">🎉 クリア</div>
+    <div class="n-title">急ぎのタスクはありません</div>
+    <div class="n-meta">先回りで直近タスクを進めましょう。</div></div>`;
+  const cls = cand.days<0?'':(cand.days===0?'amber':'green');
+  const ins = cand.aiInsight?`<div class="n-insight">🤖 ${esc(cand.aiInsight)}</div>`:'';
+  const btn = cand.aiPrompt?`<button class="n-btn" data-prompt="${esc(cand.aiPrompt)}">📋 AIに相談する文をコピー</button>`:'';
+  return `<div class="next ${cls}">
+    <div class="n-tag">⚡ 今すぐやる1つ</div>
+    <div class="n-title">${esc(cand.title)}</div>
+    <div class="n-meta">${whenLabel(cand)}・進捗${cand.progress}%${cand.requester?'・依頼 '+esc(cand.requester):''}・期限 ${esc(cand.deadline)}</div>
+    ${ins}${btn}</div>`;
+}
+
+function trend(){
+  // 古い→新しい順で over の推移
+  const arr=R.slice().reverse();
+  const vals=arr.map(r=>r.over.length);
+  const max=Math.max(3,...vals), W=520, H=110, pad=8;
+  const n=vals.length;
+  const x=i=> n<=1?W/2 : pad + i*(W-2*pad)/(n-1);
+  const y=v=> H-pad - v*(H-2*pad)/max;
+  const pts=vals.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const area=`${pad},${H-pad} ${pts} ${(W-pad)},${H-pad}`;
+  const cur=vals[vals.length-1], first=vals[0];
+  const dots=vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i===n-1?4:2.5}" fill="${i===n-1?'#e5484d':'#94a0b0'}"/>`).join('');
+  return `<div class="card"><h2>📉 期限超過の推移（直近${n}スナップショット）</h2>
+    <svg class="trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#e5484d" stop-opacity="0.28"/>
+        <stop offset="1" stop-color="#e5484d" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${area}" fill="url(#g)"/>
+      <polyline points="${pts}" fill="none" stroke="#e5484d" stroke-width="2.5"
+        stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>
+    <div class="trend-legend"><span>最古 <b>${first}件</b></span><span>現在 <b>${cur}件</b></span>
+      <span>${cur<first?'改善傾向 ▼':(cur>first?'増加傾向 ▲':'横ばい →')}</span></div></div>`;
+}
+
+function segRows(items,kind){
+  if(!items||!items.length) return `<div class="empty-mini">なし</div>`;
+  return items.map(it=>{
+    const u=urgClass(it.days);
+    const bcls={red:'b-red',amber:'b-amber',green:'b-green',blue:'b-blue'}[u];
+    return `<div class="trow"><span class="urg ${u}"></span>
+      <div class="t-main"><div class="t-title">${esc(it.title)}</div>
+        <div class="t-meta">期限 ${esc(it.deadline||'—')}${it.requester?'・依頼 '+esc(it.requester):''}</div></div>
+      <div class="pbar"><i style="width:${Math.max(2,it.progress)}%"></i></div>
+      <span class="badge ${bcls}">${whenLabel(it)}</span></div>`;
+  }).join('');
+}
+
+function tasksCard(rep){
+  return `<div class="card"><h2>🗂 期限が近い・過ぎたタスク</h2>
+    <div class="seg-title">🔴 期限超過 <span class="cnt">${rep.over.length}</span></div>
+    <div class="tasklist">${segRows(rep.over,'over')}</div>
+    <div class="seg-title">🟡 本日期限 <span class="cnt">${rep.today.length}</span></div>
+    <div class="tasklist">${segRows(rep.today,'today')}</div>
+    <div class="seg-title">🟢 直近3日 <span class="cnt">${rep.soon.length}</span></div>
+    <div class="tasklist">${segRows(rep.soon,'soon')}</div>
+  </div>`;
+}
+
+function briefCard(rep){
+  if(!rep.aiBriefing) return '';
+  return `<div class="card brief"><h2>🤖 AIブリーフィング <span class="model">Opus 4.8</span></h2>
+    <div class="body">${esc(rep.aiBriefing)}</div></div>`;
+}
+
+function render(){
+  const rep=R[IDX], prev=R[IDX+1]||null;
+  document.getElementById('genat').textContent=
+    `${fmtDate(rep.date)} ${rep.time||''} 時点 ・ 未完了 ${rep.stats.active}件 / 全${rep.stats.total}件`;
+  document.getElementById('app').innerHTML=`
+    ${heroFor(rep)}
+    ${kpis(rep,prev)}
+    <div class="grid2">
+      <div class="card"><h2>⚡ 最優先アクション</h2>${nextAction(rep)}</div>
+      ${trend()}
+    </div>
+    ${briefCard(rep)}
+    ${tasksCard(rep)}
+  `;
+  document.querySelectorAll('[data-prompt]').forEach(b=>b.onclick=()=>copy(b.dataset.prompt));
+}
+
+async function copy(text){
+  let ok=false;
+  try{ if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);ok=true;} }catch(e){}
+  if(!ok){try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();ok=document.execCommand('copy');document.body.removeChild(ta);}catch(e){}}
+  const t=document.getElementById('toast');
+  t.textContent=ok?'✅ コピーしました':'⚠️ 手動でコピーしてください';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600);
+}
+
+function buildPicker(){
+  const sel=document.getElementById('snap');
+  sel.innerHTML=R.map((r,i)=>`<option value="${i}">${fmtDate(r.date)} ${r.time||''}${i===0?'（最新）':''}</option>`).join('');
+  sel.onchange=()=>{IDX=+sel.value;render();};
+}
+
+function init(){
+  R=(window.SHINCHOKU_REPORTS||[]);
+  if(!R.length){document.getElementById('app').innerHTML='<div class="card">レポートがまだありません。</div>';return;}
+  buildPicker(); render();
+}
+const s=document.createElement('script');
+s.src='reports-data.js?t='+Date.now();
+s.onload=init;
+s.onerror=()=>{document.getElementById('app').innerHTML='<div class="card">データを読み込めませんでした。</div>';};
+document.head.appendChild(s);
+</script>
+</body>
+</html>
