@@ -1676,6 +1676,118 @@
   }
 
   /* ===================================================
+     星取管理表 スマホ最適化：横長マトリクス → タスクカード化
+     （DOMは変えずCSSのみで変換。横スクロール廃止）
+     各タスク＝1カード。担当者(目黒/梅本/新留/塩崎)を
+     チップで横並び表示し、責任者は緑で強調する。
+  =================================================== */
+  @media (max-width: 640px) {
+    /* テーブルレイアウトを解除してブロック化 */
+    .hoshitori-table,
+    .hoshitori-table tbody,
+    .hoshitori-table tr,
+    .hoshitori-table td {
+      display: block;
+    }
+    .hoshitori-table {
+      min-width: 0;
+      border: 0;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .hoshitori-table thead { display: none; }   /* 見出し列はチップ名へ移動 */
+    .hoshitori-table-wrapper { overflow: visible; margin: 0 0 var(--space-md); }
+
+    /* カテゴリ＝セクション見出し */
+    .hoshitori-table tr.category-row { background: transparent !important; margin: 18px 0 8px; }
+    .hoshitori-table tr.category-row td.category-cell {
+      position: static;
+      background: transparent !important;
+      border: 0;
+      box-shadow: none;
+      padding: 0;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* タスク＝カード */
+    .hoshitori-table tr.task-row {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--bg-primary);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+    .hoshitori-table tr.task-row td.task-name-cell {
+      position: static;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      min-width: 0;
+      max-width: none;
+      padding: 0 0 10px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--text-primary);
+      white-space: normal;
+      word-break: break-word;
+    }
+    .hoshitori-table tr.task-row td.task-name-cell .drag-handle { display: none; }
+    .hoshitori-table tr.task-row td.task-name-cell .task-name { display: inline; }
+
+    /* 担当者セル＝チップ（横並び・折返し） */
+    .hoshitori-table td.owner-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      position: static;
+      box-shadow: none;
+      min-height: 38px;
+      margin: 0 8px 0 0;
+      padding: 6px 13px;
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    .hoshitori-table td.owner-cell::before {
+      font-weight: 700;
+      color: inherit;
+    }
+    .hoshitori-table td.owner-cell[data-member="meguro"]::before   { content: "目黒"; }
+    .hoshitori-table td.owner-cell[data-member="umemoto"]::before  { content: "梅本"; }
+    .hoshitori-table td.owner-cell[data-member="niidome"]::before  { content: "新留"; }
+    .hoshitori-table td.owner-cell[data-member="shiozaki"]::before { content: "塩崎"; }
+    .hoshitori-table td.owner-cell .owner-mark { font-size: 14px; line-height: 1; }
+    .hoshitori-table td.owner-cell .owner-mark:empty { display: none; }  /* 非担当は名前のみ */
+
+    /* 責任者(○)のチップを緑で強調 */
+    .hoshitori-table td.owner-cell:has(.owner-mark.active) {
+      background: #E9F7EE;
+      border-color: rgba(52,199,89,.45);
+      color: #1f7a37;
+    }
+    .hoshitori-table td.owner-cell:has(.owner-mark.active) .owner-mark { color: #2f9e44; }
+
+    /* 編集可(ログイン時)のタップフィードバック */
+    .hoshitori-table td.owner-cell.editable { cursor: pointer; }
+    .hoshitori-table td.owner-cell.editable:active { transform: scale(.96); }
+  }
+
+  /* ===================================================
      Accessibility: Focus-visible for keyboard navigation
   =================================================== */
   .header-actions button:focus-visible,
