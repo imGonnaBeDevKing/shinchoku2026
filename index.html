@@ -5715,8 +5715,7 @@
       }
       const laid = layoutTodayColumns(todayBlocks);
       const html = laid.map(b => {
-        const t = tasks.find(x => x.id === b.taskId);
-        const title = t ? (t.title || '(無題)') : '(削除済みタスク)';
+        const title = resolveBlockTitle(b).title;
         const top = pxFromMinSinceStart(b.startMin);
         const height = Math.max(20, (b.endMin - b.startMin) * TODAY_PX_PER_MIN - 2);
         const widthPct = 96 / b._totalCols;
@@ -6052,6 +6051,24 @@
       const f = (m) => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
       return `${f(b.startMin)}–${f(b.endMin)}`;
     }
+    // ブロックのタイトルを解決。タスクが存在すれば最新タイトルを使い、
+    // 同時にブロックへスナップショット保存（バックフィル）。タスクが削除済みでも
+    // 保存済みスナップショットから項目を残す（月曜定例の報告用）。
+    function resolveBlockTitle(b) {
+      const t = tasks.find(x => x.id === b.taskId);
+      if (t) {
+        const title = t.title || '(無題)';
+        if (b.taskTitle !== title && db && currentUser) {
+          b.taskTitle = title;
+          updateDoc(doc(db, 'day_schedules', b.id), { taskTitle: title })
+            .catch(e => console.warn('taskTitle backfill failed', b.id, e));
+        }
+        return { title, completed: toBool(t.completed), deleted: false };
+      }
+      // タスクが削除済み → スナップショットがあれば項目として残す
+      if (b.taskTitle) return { title: b.taskTitle, completed: true, deleted: true };
+      return { title: '(削除済みタスク)', completed: true, deleted: true };
+    }
     function renderWeekGrid() {
       if (!elements.weekGrid) return;
       const days = weekDays(weekViewStart);
@@ -6090,11 +6107,11 @@
         const body = blocks.length === 0
           ? `<div class="week-day-empty">タスクなし</div>`
           : blocks.map(b => {
-              const t = tasks.find(x => x.id === b.taskId);
-              const title = t ? (t.title || '(無題)') : '(削除済みタスク)';
-              const completed = t && toBool(t.completed);
+              const r = resolveBlockTitle(b);
+              const title = r.title;
+              const completed = r.completed;
               const time = fmtTimeRange(b);
-              return `<div class="week-task ${completed ? 'is-completed' : ''}" data-id="${b.id}">
+              return `<div class="week-task ${completed ? 'is-completed' : ''} ${r.deleted ? 'is-deleted' : ''}" data-id="${b.id}">
                 <span class="week-task-check" aria-hidden="true">${completed ? '✓' : '□'}</span>
                 ${time ? `<span class="week-task-time">${time}</span>` : ''}
                 <span class="week-task-title">${escapeHtml(title)}</span>
@@ -6194,15 +6211,17 @@
       let end = clampTodayMin(start + TODAY_DEFAULT_DURATION);
       if (end - start < TODAY_SNAP_MIN) end = clampTodayMin(start + TODAY_SNAP_MIN);
       try {
+        const taskTitle = (tasks.find(x => x.id === taskId)?.title) || '';
         const docRef = await addDoc(collection(db, 'day_schedules'), {
           user: currentUser.email,
           date: todayPanelDateString,
           taskId,
+          taskTitle,
           startMin: start,
           endMin: end,
           createdAt: new Date().toISOString()
         });
-        todayBlocks.push({ id: docRef.id, taskId, startMin: start, endMin: end, user: currentUser.email, date: todayPanelDateString });
+        todayBlocks.push({ id: docRef.id, taskId, taskTitle, startMin: start, endMin: end, user: currentUser.email, date: todayPanelDateString });
         renderTodayBlocks();
       } catch (e) {
         console.error('addTodayBlock error', e);
