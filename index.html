@@ -5744,6 +5744,7 @@
         );
         const snap = await getDocs(q);
         todayBlocks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        await loadWorkLogTitles();
       } catch (e) {
         console.error('loadTodaySchedule error', e);
         todayBlocks = [];
@@ -6046,6 +6047,22 @@
         weekBlocks = [];
       }
     }
+    let workLogTitleMap = {};
+    async function loadWorkLogTitles() {
+      if (!db) return;
+      try {
+        const q = query(collection(db, 'work_logs'), orderBy('completedAtEpoch', 'desc'), limit(500));
+        const snap = await getDocs(q);
+        const map = {};
+        snap.docs.forEach(d => {
+          const w = d.data();
+          if (w.taskId && w.taskName && !map[w.taskId]) map[w.taskId] = w.taskName;
+        });
+        workLogTitleMap = map;
+      } catch (e) {
+        console.warn('loadWorkLogTitles error', e);
+      }
+    }
     function fmtTimeRange(b) {
       if (typeof b.startMin !== 'number' || typeof b.endMin !== 'number') return '';
       const f = (m) => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
@@ -6065,8 +6082,17 @@
         }
         return { title, completed: toBool(t.completed), deleted: false };
       }
-      // タスクが削除済み → スナップショットがあれば項目として残す
-      if (b.taskTitle) return { title: b.taskTitle, completed: true, deleted: true };
+      // タスクが削除済み → スナップショット or 作業ログから名前を復元して項目を残す
+      const recovered = b.taskTitle || workLogTitleMap[b.taskId];
+      if (recovered) {
+        // 復元できたらブロックへ保存して次回以降ログ無しでも残す
+        if (!b.taskTitle && db && currentUser) {
+          b.taskTitle = recovered;
+          updateDoc(doc(db, 'day_schedules', b.id), { taskTitle: recovered })
+            .catch(e => console.warn('taskTitle recover-save failed', b.id, e));
+        }
+        return { title: recovered, completed: true, deleted: true };
+      }
       return { title: '(削除済みタスク)', completed: true, deleted: true };
     }
     function renderWeekGrid() {
@@ -6141,7 +6167,7 @@
       elements.weekPanel.style.display = '';
       if (!weekViewStart) weekViewStart = mondayOf(new Date());
       const days = weekDays(weekViewStart);
-      await loadWeekSchedules(days);
+      await Promise.all([loadWeekSchedules(days), loadWorkLogTitles()]);
       renderWeekGrid();
       if (!weekPanelInitialized) {
         initWeekPanelEvents();
